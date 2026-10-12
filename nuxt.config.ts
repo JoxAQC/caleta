@@ -34,7 +34,12 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    // Clave de Groq (Whisper) para transcribir en el servidor: NUXT_GROQ_API_KEY.
+    groqApiKey: '',
     public: {
+      // 'navegador' usa el dictado del propio navegador; 'servidor' graba y transcribe con Whisper.
+      // Se cambia con NUXT_PUBLIC_TRANSCRIPCION.
+      transcripcion: 'navegador',
       // Muestra el login demo en lugar de Google. Solo para el stack local.
       // Se activa con NUXT_PUBLIC_DEMO_LOGIN=true en .env.
       demoLogin: false,

@@ -22,6 +22,10 @@ en lugar de Google. Solo funcionan contra el stack local, donde `supabase/seed.s
 El mapa usa MapLibre con teselas de OpenFreeMap y el buscador de locales usa Photon (OpenStreetMap).
 Ninguno necesita clave. Para pasar a Google Places basta reemplazar `app/utils/buscador.ts`.
 
+La nota de voz se convierte en texto y la grabación no se guarda. Con `NUXT_PUBLIC_TRANSCRIPCION=navegador`
+se usa el dictado del navegador (sin clave; en iPhone es poco fiable). Con `servidor` se graba, se envía a
+`/api/transcribir` y se transcribe con Whisper vía Groq, lo que requiere `NUXT_GROQ_API_KEY`.
+
 ## Puesta en marcha (una sola vez)
 
 1. **Supabase**: crea un proyecto, luego aplica el esquema:

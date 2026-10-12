@@ -161,6 +161,10 @@ function agregarFotos(e: Event) {
   input.value = ''
 }
 
+function agregarDictado(texto: string) {
+  nota.value = [nota.value.trim(), texto].filter(Boolean).join(' ').slice(0, 1000)
+}
+
 function quitarFoto(i: number) {
   URL.revokeObjectURL(fotos.value[i]!.vista)
   fotos.value.splice(i, 1)
@@ -463,7 +467,7 @@ async function guardar() {
           aria-label="Nota para la mancha"
           class="sticker mt-4 w-full resize-none p-4 outline-none placeholder:text-tinta/50"
         />
-        <p class="mt-2 text-sm">La nota de voz llega en la siguiente fase.</p>
+        <Dictado class="mt-3" @texto="agregarDictado" />
       </section>
     </div>
 
