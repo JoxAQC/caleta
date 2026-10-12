@@ -1,0 +1,485 @@
+<script setup lang="ts">
+import type { Coordenada, LugarResumen, PlanId } from '~/utils/tipos'
+import type { AspectoId } from '~/utils/catalogo'
+import type { ResultadoBusqueda } from '~/utils/buscador'
+import { ASPECTOS, LIMA, NOTAS, PLANES, PRECIOS } from '~/utils/catalogo'
+import { buscarLugares } from '~/utils/buscador'
+import { comprimirImagen } from '~/utils/imagen'
+
+const MAX_FOTOS = 4
+
+const route = useRoute()
+const supabase = useSupabaseClient()
+const { perfil } = usePerfil()
+const { categorias, tags, categoria, cargar: cargarCatalogo } = useCatalogo()
+
+const paso = ref(1)
+const lugaresGrupo = ref<LugarResumen[]>([])
+
+// Paso 1: lugar
+const existente = ref<LugarResumen | null>(null)
+const nombre = ref('')
+const direccion = ref('')
+const posicion = ref<Coordenada | null>(null)
+const origen = ref<{ proveedor: string, ref_externa: string } | null>(null)
+const busqueda = ref('')
+const resultados = ref<ResultadoBusqueda[]>([])
+const buscando = ref(false)
+
+// Paso 2: categoría y precio
+const categoriaId = ref<string | null>(null)
+const precio = ref<number | null>(null)
+
+// Paso 3: calificación
+const plan = ref<PlanId | null>(null)
+const general = ref(0)
+const generalManual = ref(false)
+const detallado = ref(false)
+const aspectos = reactive<Record<AspectoId, number>>({ comida: 0, ambiente: 0, servicio: 0, calidad_precio: 0 })
+const tagsElegidos = ref<string[]>([])
+
+// Paso 4: fotos y nota
+const nota = ref('')
+const fotos = ref<{ archivo: File, vista: string }[]>([])
+
+const guardando = ref(false)
+const error = ref('')
+
+onMounted(async () => {
+  try {
+    await cargarCatalogo()
+    const { data } = await supabase.from('lugares_resumen').select('*')
+    lugaresGrupo.value = (data ?? []) as LugarResumen[]
+    const id = route.query.lugar
+    const previo = lugaresGrupo.value.find(l => l.id === id)
+    if (previo) {
+      elegirExistente(previo)
+      paso.value = 3
+    }
+  }
+  catch {
+    error.value = 'No se pudo cargar el catálogo. Revisa tu conexión.'
+  }
+})
+
+onBeforeUnmount(() => fotos.value.forEach(f => URL.revokeObjectURL(f.vista)))
+
+// --- Paso 1 ---
+const coincidenciasGrupo = computed(() => {
+  const q = busqueda.value.trim().toLowerCase()
+  if (q.length < 2) return []
+  return lugaresGrupo.value.filter(l => l.nombre.toLowerCase().includes(q)).slice(0, 4)
+})
+
+let temporizador: ReturnType<typeof setTimeout> | undefined
+let abortar: AbortController | undefined
+watch(busqueda, (q) => {
+  clearTimeout(temporizador)
+  abortar?.abort()
+  if (q.trim().length < 3) {
+    resultados.value = []
+    buscando.value = false
+    return
+  }
+  buscando.value = true
+  temporizador = setTimeout(async () => {
+    abortar = new AbortController()
+    try {
+      resultados.value = await buscarLugares(q.trim(), posicion.value ?? LIMA, abortar.signal)
+    }
+    catch (e) {
+      if ((e as Error).name === 'AbortError') return
+      resultados.value = []
+    }
+    buscando.value = false
+  }, 350)
+})
+
+function cerrarBusqueda() {
+  clearTimeout(temporizador)
+  abortar?.abort()
+  busqueda.value = ''
+  resultados.value = []
+}
+
+function elegirExistente(l: LugarResumen) {
+  existente.value = l
+  nombre.value = l.nombre
+  direccion.value = l.direccion ?? ''
+  posicion.value = { lat: l.lat, lng: l.lng }
+  categoriaId.value = l.categoria_id
+  precio.value = l.precio
+  cerrarBusqueda()
+}
+
+function elegirResultado(r: ResultadoBusqueda) {
+  // Si alguien del grupo ya registró ese local, se reutiliza.
+  const ya = lugaresGrupo.value.find(l => l.proveedor === r.proveedor && l.ref_externa === r.ref_externa)
+  if (ya) return elegirExistente(ya)
+  existente.value = null
+  nombre.value = r.nombre
+  direccion.value = r.direccion
+  posicion.value = { lat: r.lat, lng: r.lng }
+  origen.value = { proveedor: r.proveedor, ref_externa: r.ref_externa }
+  cerrarBusqueda()
+}
+
+function soltarExistente() {
+  existente.value = null
+  nombre.value = ''
+  direccion.value = ''
+  origen.value = null
+  categoriaId.value = null
+  precio.value = null
+}
+
+// --- Paso 3 ---
+watch(aspectos, () => {
+  if (generalManual.value) return
+  const puestos = Object.values(aspectos).filter(v => v > 0)
+  if (puestos.length) general.value = Math.round(puestos.reduce((a, b) => a + b, 0) / puestos.length)
+})
+
+function fijarGeneral(v: number) {
+  general.value = v
+  generalManual.value = true
+}
+
+function alternarTag(id: string) {
+  const i = tagsElegidos.value.indexOf(id)
+  if (i >= 0) tagsElegidos.value.splice(i, 1)
+  else tagsElegidos.value.push(id)
+}
+
+// --- Paso 4 ---
+function agregarFotos(e: Event) {
+  const input = e.target as HTMLInputElement
+  const libres = MAX_FOTOS - fotos.value.length
+  for (const archivo of Array.from(input.files ?? []).slice(0, libres)) {
+    fotos.value.push({ archivo, vista: URL.createObjectURL(archivo) })
+  }
+  input.value = ''
+}
+
+function quitarFoto(i: number) {
+  URL.revokeObjectURL(fotos.value[i]!.vista)
+  fotos.value.splice(i, 1)
+}
+
+// --- Navegación ---
+const puedeSeguir = computed(() => {
+  if (paso.value === 1) return !!posicion.value && nombre.value.trim().length > 1
+  if (paso.value === 2) return !!categoriaId.value
+  if (paso.value === 3) return general.value > 0
+  return true
+})
+
+function siguiente() {
+  if (!puedeSeguir.value) return
+  // Un lugar que ya existe conserva su categoría y precio.
+  paso.value = paso.value === 1 && existente.value ? 3 : paso.value + 1
+}
+
+function atras() {
+  if (paso.value === 1) return navigateTo('/')
+  paso.value = paso.value === 3 && existente.value ? 1 : paso.value - 1
+}
+
+// Fecha del teléfono, no la del servidor (que va en UTC).
+function hoyLocal() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+const titulos = ['¿Dónde fue?', '¿Qué tipo de lugar es?', '¿Qué tal estuvo?', 'Cuéntale a la mancha']
+
+async function guardar() {
+  if (!perfil.value || guardando.value) return
+  guardando.value = true
+  error.value = ''
+  try {
+    let lugarId = existente.value?.id
+    if (!lugarId) {
+      const { data, error: e } = await supabase
+        .from('lugares')
+        .insert({
+          grupo_id: perfil.value.grupo_id,
+          nombre: nombre.value.trim(),
+          direccion: direccion.value.trim() || null,
+          lat: posicion.value!.lat,
+          lng: posicion.value!.lng,
+          categoria_id: categoriaId.value!,
+          precio: precio.value,
+          proveedor: origen.value?.proveedor ?? null,
+          ref_externa: origen.value?.ref_externa ?? null,
+          creado_por: perfil.value.id,
+        })
+        .select('id')
+        .single()
+      if (e) throw e
+      lugarId = data.id as string
+      // Si el guardado falla más adelante, el reintento no duplica el lugar.
+      existente.value = { id: lugarId } as LugarResumen
+    }
+
+    const conAspectos = detallado.value
+    const { data: resena, error: e2 } = await supabase
+      .from('resenas')
+      .insert({
+        lugar_id: lugarId,
+        grupo_id: perfil.value.grupo_id,
+        autor_id: perfil.value.id,
+        general: general.value,
+        comida: conAspectos && aspectos.comida ? aspectos.comida : null,
+        ambiente: conAspectos && aspectos.ambiente ? aspectos.ambiente : null,
+        servicio: conAspectos && aspectos.servicio ? aspectos.servicio : null,
+        calidad_precio: conAspectos && aspectos.calidad_precio ? aspectos.calidad_precio : null,
+        plan: plan.value,
+        nota: nota.value.trim() || null,
+        visitado_en: hoyLocal(),
+      })
+      .select('id')
+      .single()
+    if (e2) throw e2
+
+    if (tagsElegidos.value.length) {
+      const { error: e3 } = await supabase
+        .from('resena_tags')
+        .insert(tagsElegidos.value.map(tag_id => ({ resena_id: resena.id, tag_id })))
+      if (e3) throw e3
+    }
+
+    // Las fotos no bloquean la reseña: si alguna falla, se avisa en la ficha.
+    let fallidas = 0
+    for (const f of fotos.value) {
+      try {
+        const blob = await comprimirImagen(f.archivo)
+        const path = `${perfil.value.grupo_id}/${resena.id}/${crypto.randomUUID()}.jpg`
+        const { error: eSubida } = await supabase.storage.from('fotos').upload(path, blob, { contentType: 'image/jpeg' })
+        if (eSubida) throw eSubida
+        const { error: eFila } = await supabase.from('fotos').insert({ resena_id: resena.id, path })
+        if (eFila) throw eFila
+      }
+      catch {
+        fallidas++
+      }
+    }
+
+    await navigateTo({ path: `/lugar/${lugarId}`, query: fallidas ? { fotosFallidas: String(fallidas) } : {} })
+  }
+  catch {
+    error.value = 'No se pudo guardar la reseña. Intenta de nuevo.'
+    guardando.value = false
+  }
+}
+</script>
+
+<template>
+  <main class="mx-auto flex h-full max-w-md flex-col bg-limon">
+    <header class="px-5 pt-[max(1rem,env(safe-area-inset-top))]">
+      <div class="flex items-center gap-3">
+        <button class="text-sm font-bold" @click="atras">← {{ paso === 1 ? 'Cancelar' : 'Atrás' }}</button>
+        <div class="flex flex-1 gap-1.5" role="progressbar" :aria-valuenow="paso" aria-valuemin="1" aria-valuemax="4">
+          <div
+            v-for="n in 4"
+            :key="n"
+            class="h-2 flex-1 rounded-full border-2 border-tinta"
+            :class="n <= paso ? 'bg-tinta' : 'bg-white'"
+          />
+        </div>
+      </div>
+      <p v-if="paso > 1" class="mt-4 truncate text-sm font-bold">
+        {{ categoria(categoriaId)?.emoji }} {{ nombre }}
+      </p>
+      <h1 class="font-display text-3xl leading-tight font-extrabold" :class="paso === 1 ? 'mt-4' : 'mt-0.5'">
+        {{ titulos[paso - 1] }}
+      </h1>
+    </header>
+
+    <div class="min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-4">
+      <!-- Paso 1: lugar -->
+      <section v-if="paso === 1" class="flex h-full flex-col gap-3">
+        <div v-if="existente" class="sticker flex items-center gap-3 p-3">
+          <span class="text-2xl">{{ categoria(existente.categoria_id)?.emoji }}</span>
+          <div class="min-w-0 flex-1">
+            <p class="truncate font-bold">{{ existente.nombre }}</p>
+            <p class="text-sm">Ya está en el mapa de la mancha</p>
+          </div>
+          <button class="text-sm font-bold underline" @click="soltarExistente">Cambiar</button>
+        </div>
+
+        <template v-else>
+          <div class="relative">
+            <input
+              v-model="busqueda"
+              type="search"
+              placeholder="Busca el local: Isolina, La Mar…"
+              aria-label="Buscar local"
+              class="sticker w-full px-4 py-3 font-semibold outline-none placeholder:font-normal placeholder:text-tinta/50"
+            >
+            <ul
+              v-if="coincidenciasGrupo.length || resultados.length || buscando"
+              class="sticker absolute inset-x-0 top-full z-10 mt-2 max-h-64 overflow-y-auto py-1"
+            >
+              <li v-for="l in coincidenciasGrupo" :key="l.id">
+                <button class="flex w-full items-center gap-2 px-4 py-2 text-left" @click="elegirExistente(l)">
+                  <span>{{ categoria(l.categoria_id)?.emoji }}</span>
+                  <span class="min-w-0 flex-1 truncate font-bold">{{ l.nombre }}</span>
+                  <span class="shrink-0 rounded-full bg-limon px-2 text-xs font-bold">De la mancha</span>
+                </button>
+              </li>
+              <li v-for="r in resultados" :key="r.ref_externa">
+                <button class="block w-full px-4 py-2 text-left" @click="elegirResultado(r)">
+                  <span class="block truncate font-bold">{{ r.nombre }}</span>
+                  <span class="block truncate text-sm">{{ r.direccion }}</span>
+                </button>
+              </li>
+              <li v-if="buscando" class="px-4 py-2 text-sm">Buscando…</li>
+            </ul>
+          </div>
+
+          <input
+            v-model="nombre"
+            type="text"
+            placeholder="Nombre del lugar"
+            aria-label="Nombre del lugar"
+            maxlength="80"
+            class="sticker w-full px-4 py-3 font-display text-lg font-bold outline-none placeholder:font-sans placeholder:text-base placeholder:font-normal placeholder:text-tinta/50"
+          >
+        </template>
+
+        <MapaPicker :key="existente?.id ?? 'nuevo'" v-model="posicion" :bloqueado="!!existente" class="min-h-56 flex-1" />
+        <p v-if="!existente" class="text-center text-sm font-semibold">Mueve el mapa hasta dejar el pin sobre el lugar.</p>
+      </section>
+
+      <!-- Paso 2: categoría y precio -->
+      <section v-else-if="paso === 2">
+        <div class="grid grid-cols-2 gap-2.5">
+          <button
+            v-for="c in categorias"
+            :key="c.id"
+            class="flex items-center gap-2 rounded-2xl border-2 border-tinta px-3 py-3 text-left font-semibold"
+            :class="categoriaId === c.id ? 'shadow-sticker' : 'bg-white'"
+            :style="categoriaId === c.id ? { background: c.color } : {}"
+            :aria-pressed="categoriaId === c.id"
+            @click="categoriaId = c.id"
+          >
+            <span class="text-2xl leading-none">{{ c.emoji }}</span>{{ c.nombre }}
+          </button>
+        </div>
+
+        <h2 class="mt-6 font-display text-xl font-bold">¿Cuánto se gasta?</h2>
+        <p class="text-sm">Opcional</p>
+        <div class="mt-2 grid grid-cols-4 gap-2">
+          <button
+            v-for="p in PRECIOS"
+            :key="p.valor"
+            class="rounded-2xl border-2 border-tinta px-1 py-2 text-center"
+            :class="precio === p.valor ? 'bg-tinta text-white' : 'bg-white'"
+            :aria-pressed="precio === p.valor"
+            @click="precio = precio === p.valor ? null : p.valor"
+          >
+            <span class="block text-sm font-bold">{{ p.etiqueta }}</span>
+            <span class="block text-xs">{{ p.detalle }}</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Paso 3: calificación -->
+      <section v-else-if="paso === 3">
+        <p class="text-sm font-bold">¿Qué plan fue?</p>
+        <div class="mt-1.5 flex flex-wrap gap-2">
+          <button
+            v-for="p in PLANES"
+            :key="p.id"
+            class="rounded-full border-2 border-tinta px-3 py-1 text-sm font-semibold"
+            :class="plan === p.id ? 'bg-tinta text-white' : 'bg-white'"
+            :aria-pressed="plan === p.id"
+            @click="plan = plan === p.id ? null : p.id"
+          >
+            {{ p.emoji }} {{ p.nombre }}
+          </button>
+        </div>
+
+        <div v-if="detallado" class="sticker mt-4 space-y-3 p-4">
+          <div v-for="a in ASPECTOS" :key="a.id" class="flex items-center justify-between gap-3">
+            <span class="text-sm font-bold">{{ a.nombre }}</span>
+            <Puntaje v-model="aspectos[a.id]" :plan="plan" size="md" class="w-44" />
+          </div>
+        </div>
+
+        <div class="sticker mt-4 px-4 py-5">
+          <p v-if="detallado" class="mb-3 text-sm font-bold">
+            Nota general<template v-if="!generalManual && general"> (promedio, puedes cambiarla)</template>
+          </p>
+          <Puntaje :model-value="general" :plan="plan" size="lg" @update:model-value="fijarGeneral" />
+          <p class="mt-3 h-7 text-center font-display text-xl font-bold">{{ general ? NOTAS[general - 1] : 'Toca para calificar' }}</p>
+        </div>
+
+        <button class="mt-3 text-sm font-bold underline" @click="detallado = !detallado">
+          {{ detallado ? 'Volver a la calificación rápida' : 'Profundizar por aspecto' }}
+        </button>
+
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button
+            v-for="t in tags"
+            :key="t.id"
+            class="rounded-full border-2 border-tinta px-3 py-1 text-sm font-semibold"
+            :class="tagsElegidos.includes(t.id) ? 'bg-tinta text-white' : 'bg-white'"
+            :aria-pressed="tagsElegidos.includes(t.id)"
+            @click="alternarTag(t.id)"
+          >
+            {{ t.nombre }}
+          </button>
+        </div>
+      </section>
+
+      <!-- Paso 4: fotos y nota -->
+      <section v-else>
+        <div class="grid grid-cols-4 gap-2">
+          <div v-for="(f, i) in fotos" :key="f.vista" class="relative aspect-square">
+            <img :src="f.vista" alt="" class="size-full rounded-xl border-2 border-tinta object-cover">
+            <button
+              class="absolute -top-2 -right-2 grid size-6 place-items-center rounded-full border-2 border-tinta bg-white text-sm leading-none font-bold"
+              :aria-label="`Quitar foto ${i + 1}`"
+              @click="quitarFoto(i)"
+            >×</button>
+          </div>
+          <label
+            v-if="fotos.length < MAX_FOTOS"
+            class="grid aspect-square cursor-pointer place-items-center rounded-xl border-2 border-dashed border-tinta bg-white/60 text-center text-xs font-bold"
+          >
+            <span><span class="block text-2xl leading-none">📷</span>Agregar</span>
+            <input type="file" accept="image/*" multiple class="sr-only" @change="agregarFotos">
+          </label>
+        </div>
+        <p class="mt-2 text-sm">Hasta {{ MAX_FOTOS }} fotos. Se achican antes de subir.</p>
+
+        <textarea
+          v-model="nota"
+          rows="5"
+          maxlength="1000"
+          placeholder="Pide el arroz con mariscos, llega antes de la 1…"
+          aria-label="Nota para la mancha"
+          class="sticker mt-4 w-full resize-none p-4 outline-none placeholder:text-tinta/50"
+        />
+        <p class="mt-2 text-sm">La nota de voz llega en la siguiente fase.</p>
+      </section>
+    </div>
+
+    <footer class="px-5 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <p v-if="error" class="mb-2 text-center text-sm font-bold text-rocoto" role="alert">{{ error }}</p>
+      <button
+        v-if="paso < 4"
+        class="btn w-full bg-tinta text-lg text-white shadow-[3px_3px_0_#fff]"
+        :disabled="!puedeSeguir"
+        @click="siguiente"
+      >
+        Siguiente
+      </button>
+      <button v-else class="btn w-full bg-tinta text-lg text-white shadow-[3px_3px_0_#fff]" :disabled="guardando" @click="guardar">
+        {{ guardando ? 'Guardando…' : 'Guardar reseña' }}
+      </button>
+    </footer>
+  </main>
+</template>

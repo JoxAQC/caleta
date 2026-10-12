@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@theme {
+  --color-tinta: #2b1b3d;
+  --color-limon: #c6e03a;
+  --color-garua: #eef1ec;
+  --color-rocoto: #f0492e;
+  --color-aji: #ffb81c;
+  --color-chicha: #8a4fd0;
+  --color-mar: #2fb6c4;
+  --color-capi: #b07a4f;
+
+  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+
+  --shadow-sticker: 3px 3px 0 var(--color-tinta);
+  --shadow-sticker-lg: 5px 5px 0 var(--color-tinta);
+}
+
+html,
+body,
+#__nuxt {
+  height: 100%;
+}
+
+body {
+  background: var(--color-garua);
+  color: var(--color-tinta);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+@layer components {
+  .sticker {
+    @apply rounded-2xl border-2 border-tinta bg-white shadow-sticker;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-tinta px-5 py-3 font-semibold shadow-sticker transition-transform duration-100;
+  }
+
+  .btn:active {
+    @apply translate-x-[3px] translate-y-[3px] shadow-none;
+  }
+
+  .btn:disabled {
+    @apply opacity-60;
+  }
+}
