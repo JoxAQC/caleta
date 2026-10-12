@@ -40,7 +40,7 @@ async function entrarDemo(u: (typeof USUARIOS_DEMO)[number]) {
 <template>
   <main class="flex min-h-full flex-col items-center justify-between gap-8 bg-limon px-6 pt-14 pb-10">
     <div class="flex flex-col items-center text-center">
-      <Capi :size="150" />
+      <Capi :size="150" animo="feliz" />
       <h1 class="mt-3 font-display text-6xl font-extrabold tracking-tight">Caleta</h1>
       <p class="mt-3 max-w-64 text-lg leading-snug font-semibold">
         Los datos de la mancha, en un solo mapa.

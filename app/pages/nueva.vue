@@ -375,7 +375,9 @@ async function guardar() {
         </template>
 
         <MapaPicker :key="existente?.id ?? 'nuevo'" v-model="posicion" :bloqueado="!!existente" class="min-h-56 flex-1" />
-        <p v-if="!existente" class="text-center text-sm font-semibold">Mueve el mapa hasta dejar el pin sobre el lugar.</p>
+        <p v-if="!existente" class="text-center text-sm font-semibold">
+          {{ posicion ? 'Ajusta el mapa si el pin no quedó sobre el lugar.' : 'Busca el local o mueve el mapa para fijar la ubicación.' }}
+        </p>
       </section>
 
       <!-- Paso 2: categoría y precio -->

@@ -67,6 +67,27 @@ function fecha(dia: string) {
 }
 const nombrePlan = (id: string | null) => PLANES.find(p => p.id === id)?.nombre
 
+// --- Borrar mi reseña ---
+const porBorrar = ref<string | null>(null)
+const borrando = ref(false)
+
+async function borrarResena(r: Resena) {
+  if (borrando.value) return
+  borrando.value = true
+  aviso.value = ''
+  // Primero los archivos: al borrar la reseña se pierden las rutas.
+  const rutas = r.fotos.map(f => f.path)
+  if (rutas.length) await supabase.storage.from('fotos').remove(rutas)
+  const { error } = await supabase.from('resenas').delete().eq('id', r.id)
+  borrando.value = false
+  porBorrar.value = null
+  if (error) {
+    aviso.value = 'No se pudo borrar la reseña.'
+    return
+  }
+  await cargar()
+}
+
 // --- Quiero ir ---
 const nombreDe = (id: string | null) => mancha.value.find(x => x.id === id)?.nombre
 const miPendiente = computed(() => pendientes.value.find(x => x.usuario_id === perfil.value?.id))
@@ -118,16 +139,21 @@ async function recomendar(amigoId: string) {
   <main class="mx-auto min-h-full max-w-md px-5 pt-6 pb-28">
     <NuxtLink to="/" class="text-sm font-bold">← Volver al mapa</NuxtLink>
 
-    <p v-if="estado === 'cargando'" class="mt-10 text-center font-display text-xl font-bold">Cargando…</p>
+    <div v-if="estado === 'cargando'" class="mt-10 text-center">
+      <Capi :size="96" animo="dormido" class="mx-auto animate-pulse" />
+      <p class="mt-2 font-display text-xl font-bold">Cargando…</p>
+    </div>
 
     <div v-else-if="estado === 'error'" class="mt-10 text-center">
-      <p class="font-display text-xl font-bold">No se pudo cargar el lugar</p>
+      <Capi :size="96" animo="triste" class="mx-auto" />
+      <p class="mt-2 font-display text-xl font-bold">No se pudo cargar el lugar</p>
       <button class="btn mt-4 bg-limon" @click="cargar">Reintentar</button>
     </div>
 
-    <p v-else-if="estado === 'no-existe'" class="mt-10 text-center font-display text-xl font-bold">
-      Este lugar no existe o no es de tu grupo
-    </p>
+    <div v-else-if="estado === 'no-existe'" class="mt-10 text-center">
+      <Capi :size="96" animo="triste" class="mx-auto" />
+      <p class="mt-2 font-display text-xl font-bold">Este lugar no existe o no es de tu grupo</p>
+    </div>
 
     <template v-else-if="lugar">
       <p v-if="route.query.fotosFallidas" class="sticker mt-4 bg-white px-3 py-2 text-sm font-semibold" role="alert">
@@ -195,7 +221,10 @@ async function recomendar(amigoId: string) {
         <p v-if="aviso" class="mt-2 text-sm font-semibold" role="status">{{ aviso }}</p>
       </section>
 
-      <p v-if="!resenas.length" class="mt-8 text-center">Aún no hay reseñas de este lugar.</p>
+      <div v-if="!resenas.length" class="mt-8 text-center">
+        <Capi :size="80" class="mx-auto" />
+        <p class="mt-2 font-semibold">Nadie lo ha reseñado todavía. Estrénalo.</p>
+      </div>
 
       <article v-for="r in resenas" :key="r.id" class="sticker mt-4 p-4">
         <div class="flex items-center gap-2">
@@ -206,6 +235,15 @@ async function recomendar(amigoId: string) {
             <p class="font-bold">{{ r.autor?.nombre }}</p>
             <p class="text-xs">{{ fecha(r.visitado_en) }}<template v-if="r.plan"> · {{ nombrePlan(r.plan) }}</template></p>
           </div>
+          <template v-if="r.autor_id === perfil?.id">
+            <span v-if="porBorrar === r.id" class="flex items-center gap-2 text-xs font-bold">
+              <button class="underline" @click="porBorrar = null">Cancelar</button>
+              <button class="rounded-full border-2 border-tinta bg-rocoto px-2 py-0.5 text-white" :disabled="borrando" @click="borrarResena(r)">
+                {{ borrando ? 'Borrando…' : 'Sí, borrar' }}
+              </button>
+            </span>
+            <button v-else class="text-xs font-bold underline" @click="porBorrar = r.id">Borrar</button>
+          </template>
         </div>
 
         <div class="mt-3 flex items-center gap-2">

@@ -199,6 +199,7 @@ const ORDENES: { id: Orden, nombre: string }[] = [
         </NuxtLink>
 
         <div v-else-if="!lugares.length && !error" class="sticker pointer-events-auto bg-white p-4 text-center">
+          <Capi :size="64" animo="feliz" class="mx-auto" />
           <p class="font-display text-lg font-bold">El mapa está vacío</p>
           <p class="text-sm">Reseña el primer lugar y aparecerá aquí para toda la mancha.</p>
         </div>
@@ -229,7 +230,7 @@ const ORDENES: { id: Orden, nombre: string }[] = [
       <p class="mt-3 text-sm font-bold">{{ visibles.length }} {{ visibles.length === 1 ? 'lugar' : 'lugares' }}</p>
 
       <div v-if="!visibles.length && !error" class="mt-8 text-center">
-        <Capi :size="96" class="mx-auto" />
+        <Capi :size="96" :animo="lugares.length ? 'triste' : 'feliz'" class="mx-auto" />
         <p class="mt-2 font-display text-xl font-bold">
           {{ lugares.length ? 'Nada con esos filtros' : 'Aún no hay lugares' }}
         </p>
