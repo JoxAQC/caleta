@@ -37,6 +37,32 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"comentarios": {
+                  Row: {
+                    "autor_id": string,"creado_en": string,"id": string,"resena_id": string,"texto": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "autor_id": string,"creado_en"?: string,"id"?: string,"resena_id": string,"texto": string
+                  }
+                  Update: {
+                    "autor_id"?: string,"creado_en"?: string,"id"?: string,"resena_id"?: string,"texto"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "comentarios_autor_id_fkey"
+      columns: ["autor_id"]
+isOneToOne: false
+      referencedRelation: "perfiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "comentarios_resena_id_fkey"
+      columns: ["resena_id"]
+isOneToOne: false
+      referencedRelation: "resenas"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"fotos": {
                   Row: {
                     "creado_en": string,"id": string,"path": string,"resena_id": string
@@ -123,6 +149,44 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"pendientes": {
+                  Row: {
+                    "creado_en": string,"lugar_id": string,"recomendado_por": string | null,"usuario_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "creado_en"?: string,"lugar_id": string,"recomendado_por"?: string | null,"usuario_id": string
+                  }
+                  Update: {
+                    "creado_en"?: string,"lugar_id"?: string,"recomendado_por"?: string | null,"usuario_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "pendientes_lugar_id_fkey"
+      columns: ["lugar_id"]
+isOneToOne: false
+      referencedRelation: "lugares"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "pendientes_lugar_id_fkey"
+      columns: ["lugar_id"]
+isOneToOne: false
+      referencedRelation: "lugares_resumen"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "pendientes_recomendado_por_fkey"
+      columns: ["recomendado_por"]
+isOneToOne: false
+      referencedRelation: "perfiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "pendientes_usuario_id_fkey"
+      columns: ["usuario_id"]
+isOneToOne: false
+      referencedRelation: "perfiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"perfiles": {
                   Row: {
                     "avatar_url": string | null,"creado_en": string,"grupo_id": string,"id": string,"nombre": string
@@ -140,6 +204,32 @@ isOneToOne: false
       columns: ["grupo_id"]
 isOneToOne: false
       referencedRelation: "grupos"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"reacciones": {
+                  Row: {
+                    "creado_en": string,"emoji": string,"resena_id": string,"usuario_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "creado_en"?: string,"emoji": string,"resena_id": string,"usuario_id": string
+                  }
+                  Update: {
+                    "creado_en"?: string,"emoji"?: string,"resena_id"?: string,"usuario_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "reacciones_resena_id_fkey"
+      columns: ["resena_id"]
+isOneToOne: false
+      referencedRelation: "resenas"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "reacciones_usuario_id_fkey"
+      columns: ["usuario_id"]
+isOneToOne: false
+      referencedRelation: "perfiles"
       referencedColumns: ["id"]
     }
                   ]

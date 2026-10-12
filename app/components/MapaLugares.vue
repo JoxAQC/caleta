@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { Map as MapaGL, Marker } from 'maplibre-gl'
-import type { LugarResumen } from '~/utils/tipos'
+import type { LugarRico } from '~/composables/useLugares'
 import { LIMA } from '~/utils/catalogo'
 
-const props = defineProps<{ lugares: LugarResumen[], seleccionado?: string | null }>()
+const props = defineProps<{ lugares: LugarRico[], seleccionado?: string | null }>()
 const emit = defineEmits<{ seleccionar: [id: string | null] }>()
 
 const { categoria } = useCatalogo()
@@ -22,8 +22,9 @@ function pintar() {
     el.type = 'button'
     el.className = 'pin'
     el.classList.toggle('pin--activo', l.id === props.seleccionado)
+    el.classList.toggle('pin--pendiente', l.pendiente)
     el.style.background = cat?.color ?? '#fff'
-    el.setAttribute('aria-label', l.nombre)
+    el.setAttribute('aria-label', l.pendiente ? `${l.nombre}, en tu lista Quiero ir` : l.nombre)
     el.textContent = cat?.emoji ?? '📍'
     el.addEventListener('click', (e) => {
       e.stopPropagation()
@@ -76,6 +77,19 @@ onBeforeUnmount(() => mapa?.remove())
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
+}
+
+/* En "Quiero ir": borde punteado y marcador. */
+.pin--pendiente {
+  border-style: dashed;
+}
+
+.pin--pendiente::after {
+  content: '🔖';
+  position: absolute;
+  top: -10px;
+  right: -8px;
+  font-size: 14px;
 }
 
 .pin--activo {

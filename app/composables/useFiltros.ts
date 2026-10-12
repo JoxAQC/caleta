@@ -9,9 +9,10 @@ export interface Filtros {
   precioMax: number | null
   minimo: number
   autor: string | null
+  soloPendientes: boolean
 }
 
-const VACIO: Filtros = { texto: '', categorias: [], tags: [], plan: null, precioMax: null, minimo: 0, autor: null }
+const VACIO: Filtros = { texto: '', categorias: [], tags: [], plan: null, precioMax: null, minimo: 0, autor: null, soloPendientes: false }
 
 export function useFiltros() {
   const filtros = useState<Filtros>('filtros', () => structuredClone(VACIO))
@@ -32,6 +33,7 @@ export function useFiltros() {
     if (f.precioMax && (l.precio == null || l.precio > f.precioMax)) return false
     if (f.minimo && (l.promedio ?? 0) < f.minimo) return false
     if (f.autor && !l.autores.includes(f.autor)) return false
+    if (f.soloPendientes && !l.pendiente) return false
     return true
   }
 

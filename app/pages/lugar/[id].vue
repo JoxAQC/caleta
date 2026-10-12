@@ -1,37 +1,48 @@
 <script setup lang="ts">
-import type { LugarResumen, Resena } from '~/utils/tipos'
+import type { LugarResumen, Pendiente, Perfil, Resena } from '~/utils/tipos'
 import { ASPECTOS, emojiDePlan, etiquetaPrecio, NOTAS, PLANES } from '~/utils/catalogo'
 
 const route = useRoute()
 const supabase = useSupabaseClient()
 const { categoria, tag, cargar: cargarCatalogo } = useCatalogo()
+const { perfil } = usePerfil()
 
 const lugar = ref<LugarResumen | null>(null)
 const resenas = ref<Resena[]>([])
 const urls = ref<Record<string, string>>({})
 const estado = ref<'cargando' | 'listo' | 'error' | 'no-existe'>('cargando')
+const pendientes = ref<Pendiente[]>([])
+const mancha = ref<Pick<Perfil, 'id' | 'nombre'>[]>([])
+const recomendando = ref(false)
+const aviso = ref('')
 
 async function cargar() {
   estado.value = 'cargando'
   try {
     await cargarCatalogo()
     const id = route.params.id as string
-    const [l, r] = await Promise.all([
+    const [l, r, p, m] = await Promise.all([
       supabase.from('lugares_resumen').select('*').eq('id', id).maybeSingle(),
       supabase
         .from('resenas')
-        .select('*, autor:perfiles(nombre, avatar_url), resena_tags(tag_id), fotos(path)')
+        .select('*, autor:perfiles!resenas_autor_id_fkey(nombre, avatar_url), resena_tags(tag_id), fotos(path), reacciones(emoji, usuario_id), comentarios(id, texto, creado_en, autor_id, autor:perfiles!comentarios_autor_id_fkey(nombre))')
         .eq('lugar_id', id)
         .order('creado_en', { ascending: false }),
+      supabase.from('pendientes').select('usuario_id, recomendado_por').eq('lugar_id', id),
+      supabase.from('perfiles').select('id, nombre').order('nombre'),
     ])
     if (l.error) throw l.error
     if (r.error) throw r.error
+    if (p.error) throw p.error
+    if (m.error) throw m.error
+    pendientes.value = p.data
+    mancha.value = m.data
     if (!l.data) {
       estado.value = 'no-existe'
       return
     }
     lugar.value = l.data as LugarResumen
-    resenas.value = r.data as Resena[]
+    resenas.value = r.data as unknown as Resena[]
 
     const rutas = resenas.value.flatMap(x => x.fotos.map(f => f.path))
     if (rutas.length) {
@@ -55,6 +66,52 @@ function fecha(dia: string) {
   return new Date(a!, m! - 1, d!).toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 const nombrePlan = (id: string | null) => PLANES.find(p => p.id === id)?.nombre
+
+// --- Quiero ir ---
+const nombreDe = (id: string | null) => mancha.value.find(x => x.id === id)?.nombre
+const miPendiente = computed(() => pendientes.value.find(x => x.usuario_id === perfil.value?.id))
+const otrosQueQuieren = computed(() =>
+  pendientes.value.filter(x => x.usuario_id !== perfil.value?.id).map(x => nombreDe(x.usuario_id)).filter(Boolean),
+)
+// A quién se le puede recomendar: quien no lo tiene pendiente ni lo ha reseñado.
+const recomendables = computed(() =>
+  mancha.value.filter(x =>
+    x.id !== perfil.value?.id
+    && !pendientes.value.some(q => q.usuario_id === x.id)
+    && !resenas.value.some(r => r.autor_id === x.id),
+  ),
+)
+
+async function alternarPendiente() {
+  const yo = perfil.value?.id
+  if (!yo || !lugar.value) return
+  aviso.value = ''
+  const antes = [...pendientes.value]
+  const quitar = !!miPendiente.value
+  pendientes.value = quitar ? antes.filter(x => x.usuario_id !== yo) : [...antes, { usuario_id: yo, recomendado_por: null }]
+  const { error } = quitar
+    ? await supabase.from('pendientes').delete().match({ usuario_id: yo, lugar_id: lugar.value.id })
+    : await supabase.from('pendientes').insert({ usuario_id: yo, lugar_id: lugar.value.id })
+  if (error) {
+    pendientes.value = antes
+    aviso.value = 'No se pudo actualizar tu lista.'
+  }
+}
+
+async function recomendar(amigoId: string) {
+  const yo = perfil.value?.id
+  if (!yo || !lugar.value) return
+  aviso.value = ''
+  const { error } = await supabase
+    .from('pendientes')
+    .insert({ usuario_id: amigoId, lugar_id: lugar.value.id, recomendado_por: yo })
+  if (error) {
+    aviso.value = 'No se pudo enviar la recomendación.'
+    return
+  }
+  pendientes.value.push({ usuario_id: amigoId, recomendado_por: yo })
+  aviso.value = `Listo: ${nombreDe(amigoId)} lo verá en su lista "Quiero ir".`
+}
 </script>
 
 <template>
@@ -98,6 +155,45 @@ const nombrePlan = (id: string | null) => PLANES.find(p => p.id === id)?.nombre
           >Cómo llegar</a>
         </div>
       </header>
+
+      <section class="mt-4">
+        <div class="flex gap-2">
+          <button
+            class="btn flex-1 px-3 py-2 text-sm"
+            :class="miPendiente ? 'bg-aji' : 'bg-white'"
+            :aria-pressed="!!miPendiente"
+            @click="alternarPendiente"
+          >
+            🔖 {{ miPendiente ? 'En tu lista' : 'Quiero ir' }}
+          </button>
+          <button
+            v-if="recomendables.length"
+            class="btn flex-1 bg-white px-3 py-2 text-sm"
+            :aria-expanded="recomendando"
+            @click="recomendando = !recomendando"
+          >
+            📣 Recomendar
+          </button>
+        </div>
+        <div v-if="recomendando && recomendables.length" class="mt-3 flex flex-wrap items-center gap-2">
+          <span class="text-sm font-bold">¿A quién?</span>
+          <button
+            v-for="a in recomendables"
+            :key="a.id"
+            class="rounded-full border-2 border-tinta bg-white px-3 py-1 text-sm font-semibold"
+            @click="recomendar(a.id)"
+          >
+            {{ a.nombre }}
+          </button>
+        </div>
+        <p v-if="miPendiente?.recomendado_por" class="mt-2 text-sm font-semibold">
+          Te lo recomendó {{ nombreDe(miPendiente.recomendado_por) }}.
+        </p>
+        <p v-if="otrosQueQuieren.length" class="mt-2 text-sm">
+          También {{ otrosQueQuieren.length === 1 ? 'quiere' : 'quieren' }} ir: {{ otrosQueQuieren.join(', ') }}.
+        </p>
+        <p v-if="aviso" class="mt-2 text-sm font-semibold" role="status">{{ aviso }}</p>
+      </section>
 
       <p v-if="!resenas.length" class="mt-8 text-center">Aún no hay reseñas de este lugar.</p>
 
@@ -146,6 +242,8 @@ const nombrePlan = (id: string | null) => PLANES.find(p => p.id === id)?.nombre
             >
           </a>
         </div>
+
+        <ResenaSocial :resena-id="r.id" :reacciones="r.reacciones" :comentarios="r.comentarios" />
       </article>
 
       <div class="fixed inset-x-0 bottom-0 flex justify-center p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">

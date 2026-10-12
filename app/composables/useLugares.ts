@@ -5,22 +5,28 @@ export interface LugarRico extends LugarResumen {
   tags: string[]
   planes: PlanId[]
   autores: string[]
+  // Está en la lista "Quiero ir" del usuario en sesión.
+  pendiente: boolean
 }
 
 export function useLugares() {
   const supabase = useSupabaseClient()
+  const { perfil } = usePerfil()
   const lugares = useState<LugarRico[]>('lugares', () => [])
   const mancha = useState<Pick<Perfil, 'id' | 'nombre'>[]>('mancha', () => [])
 
   async function cargar() {
-    const [l, r, p] = await Promise.all([
+    const [l, r, p, q] = await Promise.all([
       supabase.from('lugares_resumen').select('*'),
       supabase.from('resenas').select('lugar_id, autor_id, plan, resena_tags(tag_id)'),
       supabase.from('perfiles').select('id, nombre').order('nombre'),
+      supabase.from('pendientes').select('lugar_id').eq('usuario_id', perfil.value?.id ?? ''),
     ])
     if (l.error) throw l.error
     if (r.error) throw r.error
     if (p.error) throw p.error
+    if (q.error) throw q.error
+    const mios = new Set(q.data.map(x => x.lugar_id))
 
     const porLugar = new Map<string, { tags: Set<string>, planes: Set<PlanId>, autores: Set<string> }>()
     for (const res of r.data) {
@@ -33,7 +39,7 @@ export function useLugares() {
 
     lugares.value = (l.data as unknown as LugarResumen[]).map((lugar) => {
       const x = porLugar.get(lugar.id)
-      return { ...lugar, tags: [...(x?.tags ?? [])], planes: [...(x?.planes ?? [])], autores: [...(x?.autores ?? [])] }
+      return { ...lugar, tags: [...(x?.tags ?? [])], planes: [...(x?.planes ?? [])], autores: [...(x?.autores ?? [])], pendiente: mios.has(lugar.id) }
     })
     mancha.value = p.data
   }

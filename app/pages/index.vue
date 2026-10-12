@@ -140,6 +140,15 @@ const ORDENES: { id: Orden, nombre: string }[] = [
         </div>
         <div class="-mr-3 flex min-w-0 flex-1 gap-2 overflow-x-auto pr-3 pb-1">
           <button
+            v-if="lugares.some(l => l.pendiente)"
+            class="shrink-0 rounded-full border-2 border-tinta px-3 py-1 text-sm font-semibold"
+            :class="filtros.soloPendientes ? 'bg-aji' : 'bg-white'"
+            :aria-pressed="filtros.soloPendientes"
+            @click="filtros.soloPendientes = !filtros.soloPendientes"
+          >
+            🔖 Quiero ir
+          </button>
+          <button
             v-for="c in categoriasUsadas"
             :key="c.id"
             class="shrink-0 rounded-full border-2 border-tinta px-3 py-1 text-sm font-semibold"
@@ -180,7 +189,12 @@ const ORDENES: { id: Orden, nombre: string }[] = [
             </span>
           </div>
           <p class="mt-2 text-sm font-semibold">
-            {{ lugar.total_resenas }} {{ lugar.total_resenas === 1 ? 'reseña' : 'reseñas' }} de la mancha · Ver ficha
+            <template v-if="lugar.pendiente">🔖 En tu lista · </template>
+            <template v-if="lugar.total_resenas">
+              {{ lugar.total_resenas }} {{ lugar.total_resenas === 1 ? 'reseña' : 'reseñas' }} de la mancha ·
+            </template>
+            <template v-else>Sin reseñas aún · </template>
+            Ver ficha
           </p>
         </NuxtLink>
 
@@ -240,7 +254,9 @@ const ORDENES: { id: Orden, nombre: string }[] = [
             <span v-if="l.promedio" class="rounded-full border-2 border-tinta bg-limon px-2.5 py-0.5 font-display font-bold">
               {{ l.promedio.toFixed(1) }}
             </span>
-            <p class="mt-1 text-xs">{{ l.total_resenas }} {{ l.total_resenas === 1 ? 'reseña' : 'reseñas' }}</p>
+            <p class="mt-1 text-xs">
+              <template v-if="l.pendiente">🔖 </template>{{ l.total_resenas }} {{ l.total_resenas === 1 ? 'reseña' : 'reseñas' }}
+            </p>
           </div>
         </div>
         <div v-if="l.tags.length" class="mt-2 flex flex-wrap gap-1.5">

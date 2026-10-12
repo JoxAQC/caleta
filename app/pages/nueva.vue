@@ -197,34 +197,56 @@ function hoyLocal() {
 
 const titulos = ['¿Dónde fue?', '¿Qué tipo de lugar es?', '¿Qué tal estuvo?', 'Cuéntale a la mancha']
 
+// Devuelve el id del lugar elegido; si es nuevo, lo crea.
+async function asegurarLugar() {
+  if (existente.value?.id) return existente.value.id
+  const { data, error: e } = await supabase
+    .from('lugares')
+    .insert({
+      grupo_id: perfil.value!.grupo_id,
+      nombre: nombre.value.trim(),
+      direccion: direccion.value.trim() || null,
+      lat: posicion.value!.lat,
+      lng: posicion.value!.lng,
+      categoria_id: categoriaId.value!,
+      precio: precio.value,
+      proveedor: origen.value?.proveedor ?? null,
+      ref_externa: origen.value?.ref_externa ?? null,
+      creado_por: perfil.value!.id,
+    })
+    .select('id')
+    .single()
+  if (e) throw e
+  // Si el guardado falla más adelante, el reintento no duplica el lugar.
+  existente.value = { id: data.id } as LugarResumen
+  return data.id
+}
+
+// Guarda el lugar en "Quiero ir" sin reseñarlo.
+async function guardarParaDespues() {
+  if (!perfil.value || guardando.value || !categoriaId.value) return
+  guardando.value = true
+  error.value = ''
+  try {
+    const lugarId = await asegurarLugar()
+    const { error: e } = await supabase
+      .from('pendientes')
+      .upsert({ usuario_id: perfil.value.id, lugar_id: lugarId }, { onConflict: 'usuario_id,lugar_id', ignoreDuplicates: true })
+    if (e) throw e
+    await navigateTo(`/lugar/${lugarId}`)
+  }
+  catch {
+    error.value = 'No se pudo guardar el lugar. Intenta de nuevo.'
+    guardando.value = false
+  }
+}
+
 async function guardar() {
   if (!perfil.value || guardando.value) return
   guardando.value = true
   error.value = ''
   try {
-    let lugarId = existente.value?.id
-    if (!lugarId) {
-      const { data, error: e } = await supabase
-        .from('lugares')
-        .insert({
-          grupo_id: perfil.value.grupo_id,
-          nombre: nombre.value.trim(),
-          direccion: direccion.value.trim() || null,
-          lat: posicion.value!.lat,
-          lng: posicion.value!.lng,
-          categoria_id: categoriaId.value!,
-          precio: precio.value,
-          proveedor: origen.value?.proveedor ?? null,
-          ref_externa: origen.value?.ref_externa ?? null,
-          creado_por: perfil.value.id,
-        })
-        .select('id')
-        .single()
-      if (e) throw e
-      lugarId = data.id as string
-      // Si el guardado falla más adelante, el reintento no duplica el lugar.
-      existente.value = { id: lugarId } as LugarResumen
-    }
+    const lugarId = await asegurarLugar()
 
     const conAspectos = detallado.value
     const { data: resena, error: e2 } = await supabase
@@ -480,6 +502,14 @@ async function guardar() {
         @click="siguiente"
       >
         Siguiente
+      </button>
+      <button
+        v-if="paso === 2"
+        class="mt-3 w-full text-center text-sm font-bold underline disabled:opacity-50"
+        :disabled="!puedeSeguir || guardando"
+        @click="guardarParaDespues"
+      >
+        🔖 Aún no voy: guardar en "Quiero ir"
       </button>
       <button v-else class="btn w-full bg-tinta text-lg text-white shadow-[3px_3px_0_#fff]" :disabled="guardando" @click="guardar">
         {{ guardando ? 'Guardando…' : 'Guardar reseña' }}

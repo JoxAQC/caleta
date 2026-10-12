@@ -59,6 +59,26 @@ export interface Resena {
   autor: Pick<Perfil, 'nombre' | 'avatar_url'> | null
   resena_tags: { tag_id: string }[]
   fotos: { path: string }[]
+  reacciones: Reaccion[]
+  comentarios: Comentario[]
+}
+
+export interface Reaccion {
+  emoji: string
+  usuario_id: string
+}
+
+export interface Comentario {
+  id: string
+  texto: string
+  creado_en: string
+  autor_id: string
+  autor: Pick<Perfil, 'nombre'> | null
+}
+
+export interface Pendiente {
+  usuario_id: string
+  recomendado_por: string | null
 }
 
 export interface Coordenada {
