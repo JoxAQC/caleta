@@ -259,7 +259,7 @@ async function asegurarLugar() {
 }
 
 // Guarda el lugar en "Quiero ir" sin reseñarlo.
-async function guardarParaDespues() {
+async function guardarParaDespues(privado = false) {
   if (!perfil.value || guardando.value || !categoriaId.value) return
   guardando.value = true
   error.value = ''
@@ -267,7 +267,7 @@ async function guardarParaDespues() {
     const lugarId = await asegurarLugar()
     const { error: e } = await supabase
       .from('pendientes')
-      .upsert({ usuario_id: perfil.value.id, lugar_id: lugarId }, { onConflict: 'usuario_id,lugar_id', ignoreDuplicates: true })
+      .upsert({ usuario_id: perfil.value.id, lugar_id: lugarId, privado }, { onConflict: 'usuario_id,lugar_id', ignoreDuplicates: true })
     if (e) throw e
     await navigateTo({ path: '/', query: { lugar: lugarId } })
   }
@@ -559,9 +559,17 @@ async function guardar() {
         v-if="paso === 2"
         class="mt-3 w-full text-center text-sm font-bold underline disabled:opacity-50"
         :disabled="!puedeSeguir || guardando"
-        @click="guardarParaDespues"
+        @click="guardarParaDespues(false)"
       >
         🔖 Aún no voy: guardar en "Quiero ir"
+      </button>
+      <button
+        v-if="paso === 2"
+        class="mt-2 w-full text-center text-sm font-bold underline disabled:opacity-50"
+        :disabled="!puedeSeguir || guardando"
+        @click="guardarParaDespues(true)"
+      >
+        🔒 Guardarlo solo para mí
       </button>
       <button v-if="paso === 4" class="btn w-full bg-tinta text-lg text-papel shadow-[3px_3px_0_var(--color-papel)]" :disabled="guardando" @click="guardar">
         {{ guardando ? 'Guardando…' : 'Guardar reseña' }}

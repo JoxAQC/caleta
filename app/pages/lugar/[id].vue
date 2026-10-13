@@ -28,7 +28,7 @@ async function cargar() {
         .select('*, autor:perfiles!resenas_autor_id_fkey(nombre, avatar_url), resena_tags(tag_id), fotos(path), reacciones(emoji, usuario_id), comentarios(id, texto, creado_en, autor_id, autor:perfiles!comentarios_autor_id_fkey(nombre))')
         .eq('lugar_id', id)
         .order('creado_en', { ascending: false }),
-      supabase.from('pendientes').select('usuario_id, recomendado_por').eq('lugar_id', id),
+      supabase.from('pendientes').select('usuario_id, recomendado_por, privado').eq('lugar_id', id),
       supabase.from('perfiles').select('id, nombre').order('nombre'),
     ])
     if (l.error) throw l.error
@@ -36,6 +36,7 @@ async function cargar() {
     if (p.error) throw p.error
     if (m.error) throw m.error
     pendientes.value = p.data
+    enPrivado.value = p.data.find(x => x.usuario_id === perfil.value?.id)?.privado ?? false
     mancha.value = m.data
     if (!l.data) {
       estado.value = 'no-existe'
@@ -91,6 +92,8 @@ async function borrarResena(r: Resena) {
 // --- Quiero ir ---
 const nombreDe = (id: string | null) => mancha.value.find(x => x.id === id)?.nombre
 const miPendiente = computed(() => pendientes.value.find(x => x.usuario_id === perfil.value?.id))
+// Casilla "solo para mí": vale para lo que se guarde y para lo ya guardado.
+const enPrivado = ref(false)
 const otrosQueQuieren = computed(() =>
   pendientes.value.filter(x => x.usuario_id !== perfil.value?.id).map(x => nombreDe(x.usuario_id)).filter(Boolean),
 )
@@ -109,14 +112,35 @@ async function alternarPendiente() {
   aviso.value = ''
   const antes = [...pendientes.value]
   const quitar = !!miPendiente.value
-  pendientes.value = quitar ? antes.filter(x => x.usuario_id !== yo) : [...antes, { usuario_id: yo, recomendado_por: null }]
+  pendientes.value = quitar
+    ? antes.filter(x => x.usuario_id !== yo)
+    : [...antes, { usuario_id: yo, recomendado_por: null, privado: enPrivado.value }]
   const { error } = quitar
     ? await supabase.from('pendientes').delete().match({ usuario_id: yo, lugar_id: lugar.value.id })
-    : await supabase.from('pendientes').insert({ usuario_id: yo, lugar_id: lugar.value.id })
+    : await supabase.from('pendientes').insert({ usuario_id: yo, lugar_id: lugar.value.id, privado: enPrivado.value })
   if (error) {
     pendientes.value = antes
     aviso.value = 'No se pudo actualizar tu lista.'
   }
+}
+
+// Cambia la privacidad de un pendiente que ya está guardado.
+async function cambiarPrivacidad() {
+  const mio = miPendiente.value
+  const yo = perfil.value?.id
+  if (!mio || !yo || !lugar.value) return
+  aviso.value = ''
+  const nuevo = enPrivado.value
+  const { error } = await supabase
+    .from('pendientes')
+    .update({ privado: nuevo })
+    .match({ usuario_id: yo, lugar_id: lugar.value.id })
+  if (error) {
+    enPrivado.value = !nuevo
+    aviso.value = 'No se pudo cambiar la privacidad.'
+    return
+  }
+  mio.privado = nuevo
 }
 
 async function recomendar(amigoId: string) {
@@ -130,7 +154,7 @@ async function recomendar(amigoId: string) {
     aviso.value = 'No se pudo enviar la recomendación.'
     return
   }
-  pendientes.value.push({ usuario_id: amigoId, recomendado_por: yo })
+  pendientes.value.push({ usuario_id: amigoId, recomendado_por: yo, privado: false })
   aviso.value = `Listo: ${nombreDe(amigoId)} lo verá en su lista "Quiero ir".`
 }
 </script>
@@ -212,6 +236,11 @@ async function recomendar(amigoId: string) {
             {{ a.nombre }}
           </button>
         </div>
+        <!-- Una recomendación la ven las dos personas: no puede ser privada. -->
+        <label v-if="!miPendiente?.recomendado_por" class="mt-3 flex cursor-pointer items-center gap-2 text-sm font-semibold">
+          <input v-model="enPrivado" type="checkbox" class="size-4 accent-chicha" @change="cambiarPrivacidad">
+          🔒 {{ miPendiente ? 'Solo yo veo que lo tengo guardado' : 'Guardarlo solo para mí' }}
+        </label>
         <p v-if="miPendiente?.recomendado_por" class="mt-2 text-sm font-semibold">
           Te lo recomendó {{ nombreDe(miPendiente.recomendado_por) }}.
         </p>

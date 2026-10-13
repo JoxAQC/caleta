@@ -177,14 +177,14 @@ isOneToOne: false
                   ]
                 },"pendientes": {
                   Row: {
-                    "creado_en": string,"lugar_id": string,"recomendado_por": string | null,"usuario_id": string
+                    "creado_en": string,"lugar_id": string,"privado": boolean,"recomendado_por": string | null,"usuario_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "creado_en"?: string,"lugar_id": string,"recomendado_por"?: string | null,"usuario_id": string
+                    "creado_en"?: string,"lugar_id": string,"privado"?: boolean,"recomendado_por"?: string | null,"usuario_id": string
                   }
                   Update: {
-                    "creado_en"?: string,"lugar_id"?: string,"recomendado_por"?: string | null,"usuario_id"?: string
+                    "creado_en"?: string,"lugar_id"?: string,"privado"?: boolean,"recomendado_por"?: string | null,"usuario_id"?: string
                   }
                   Relationships: [
                     {

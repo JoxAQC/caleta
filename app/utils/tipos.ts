@@ -82,6 +82,7 @@ export interface Comentario {
 export interface Pendiente {
   usuario_id: string
   recomendado_por: string | null
+  privado: boolean
 }
 
 export interface Coordenada {
