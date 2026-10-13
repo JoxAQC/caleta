@@ -8,12 +8,14 @@ const { filtros, activos, limpiar, alternar } = useFiltros()
 const { tags } = useCatalogo()
 const { mancha } = useLugares()
 const { perfil } = usePerfil()
+const { esNoche } = useModo()
+const tagsDelModo = computed(() => tags.value.filter(t => t.ambito === 'ambos' || esNoche.value))
 
 const chip = 'rounded-full border-2 border-tinta px-3 py-1 text-sm font-semibold'
 </script>
 
 <template>
-  <div class="fixed inset-0 z-20 flex flex-col justify-end bg-tinta/50" @click.self="emit('cerrar')">
+  <div class="fixed inset-0 z-20 flex flex-col justify-end bg-black/60" @click.self="emit('cerrar')">
     <section
       class="mx-auto flex max-h-[85%] w-full max-w-md flex-col rounded-t-3xl border-2 border-b-0 border-tinta bg-garua"
       role="dialog"
@@ -21,7 +23,7 @@ const chip = 'rounded-full border-2 border-tinta px-3 py-1 text-sm font-semibold
       aria-label="Filtros"
     >
       <header class="flex items-center justify-between px-5 pt-4 pb-2">
-        <h2 class="font-display text-2xl font-extrabold">¿Qué se antoja?</h2>
+        <h2 class="font-display text-2xl font-extrabold">{{ esNoche ? '¿A dónde la seguimos?' : '¿Qué se antoja?' }}</h2>
         <button v-if="activos" class="text-sm font-bold underline" @click="limpiar">Limpiar</button>
       </header>
 
@@ -32,7 +34,7 @@ const chip = 'rounded-full border-2 border-tinta px-3 py-1 text-sm font-semibold
             <button
               v-for="p in PLANES"
               :key="p.id"
-              :class="[chip, filtros.plan === p.id ? 'bg-tinta text-white' : 'bg-white']"
+              :class="[chip, filtros.plan === p.id ? 'bg-tinta text-papel' : 'bg-papel']"
               :aria-pressed="filtros.plan === p.id"
               @click="filtros.plan = filtros.plan === p.id ? null : p.id"
             >
@@ -47,7 +49,7 @@ const chip = 'rounded-full border-2 border-tinta px-3 py-1 text-sm font-semibold
             <button
               v-for="n in [3, 4, 5]"
               :key="n"
-              :class="[chip, filtros.minimo === n ? 'bg-tinta text-white' : 'bg-white']"
+              :class="[chip, filtros.minimo === n ? 'bg-tinta text-papel' : 'bg-papel']"
               :aria-pressed="filtros.minimo === n"
               @click="filtros.minimo = filtros.minimo === n ? 0 : n"
             >
@@ -62,7 +64,7 @@ const chip = 'rounded-full border-2 border-tinta px-3 py-1 text-sm font-semibold
             <button
               v-for="p in PRECIOS"
               :key="p.valor"
-              :class="[chip, filtros.precioMax === p.valor ? 'bg-tinta text-white' : 'bg-white']"
+              :class="[chip, filtros.precioMax === p.valor ? 'bg-tinta text-papel' : 'bg-papel']"
               :aria-pressed="filtros.precioMax === p.valor"
               @click="filtros.precioMax = filtros.precioMax === p.valor ? null : p.valor"
             >
@@ -77,7 +79,7 @@ const chip = 'rounded-full border-2 border-tinta px-3 py-1 text-sm font-semibold
             <button
               v-for="m in mancha"
               :key="m.id"
-              :class="[chip, filtros.autor === m.id ? 'bg-tinta text-white' : 'bg-white']"
+              :class="[chip, filtros.autor === m.id ? 'bg-tinta text-papel' : 'bg-papel']"
               :aria-pressed="filtros.autor === m.id"
               @click="filtros.autor = filtros.autor === m.id ? null : m.id"
             >
@@ -90,9 +92,9 @@ const chip = 'rounded-full border-2 border-tinta px-3 py-1 text-sm font-semibold
           <h3 class="text-sm font-bold">Que tenga</h3>
           <div class="mt-1.5 flex flex-wrap gap-2">
             <button
-              v-for="t in tags"
+              v-for="t in tagsDelModo"
               :key="t.id"
-              :class="[chip, filtros.tags.includes(t.id) ? 'bg-tinta text-white' : 'bg-white']"
+              :class="[chip, filtros.tags.includes(t.id) ? 'bg-tinta text-papel' : 'bg-papel']"
               :aria-pressed="filtros.tags.includes(t.id)"
               @click="alternar('tags', t.id)"
             >

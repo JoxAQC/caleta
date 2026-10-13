@@ -12,15 +12,17 @@ export interface Categoria {
   emoji: string
   color: string
   orden: number
+  ambito: 'dia' | 'noche' | 'ambos'
 }
 
 export interface Tag {
   id: string
   nombre: string
   orden: number
+  ambito: 'ambos' | 'noche'
 }
 
-export type PlanId = 'mancha' | 'cita' | 'solo' | 'familia'
+export type PlanId = 'mancha' | 'cita' | 'solo' | 'familia' | 'juerga'
 
 export interface Lugar {
   id: string
@@ -54,6 +56,7 @@ export interface Resena {
   calidad_precio: number | null
   plan: PlanId | null
   nota: string | null
+  privada: boolean
   visitado_en: string
   creado_en: string
   autor: Pick<Perfil, 'nombre' | 'avatar_url'> | null

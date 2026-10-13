@@ -2,7 +2,7 @@
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { Map as MapaGL, Marker } from 'maplibre-gl'
 import type { LugarRico } from '~/composables/useLugares'
-import { LIMA } from '~/utils/catalogo'
+import { estiloMapa, LIMA } from '~/utils/catalogo'
 
 // enfocar: id del lugar en el que debe abrir el mapa (por ejemplo, el recién reseñado).
 // Sin él, el mapa abre en la ubicación de la persona si dio permiso.
@@ -12,6 +12,7 @@ const ZOOM_CERCA = 15
 const emit = defineEmits<{ seleccionar: [id: string | null] }>()
 
 const { categoria } = useCatalogo()
+const { esNoche } = useModo()
 const contenedor = ref<HTMLElement>()
 let mapa: MapaGL | undefined
 let gl: typeof import('maplibre-gl') | undefined
@@ -52,7 +53,7 @@ onMounted(async () => {
   gl = await import('maplibre-gl')
   mapa = new gl.Map({
     container: contenedor.value!,
-    style: 'https://tiles.openfreemap.org/styles/positron',
+    style: estiloMapa(esNoche.value),
     center: [LIMA.lng, LIMA.lat],
     zoom: 12,
     attributionControl: { compact: true },
@@ -81,6 +82,8 @@ watch(() => props.seleccionado, (id) => {
   const l = props.lugares.find(x => x.id === id)
   if (l && mapa) mapa.easeTo({ center: [l.lng, l.lat], offset: [0, -80], duration: 400 })
 })
+
+watch(esNoche, noche => mapa?.setStyle(estiloMapa(noche)))
 
 onBeforeUnmount(() => mapa?.remove())
 </script>

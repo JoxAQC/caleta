@@ -103,12 +103,12 @@ async function anular(codigo: string) {
         <button v-if="puedeCompartir" class="rounded-full border-2 border-tinta bg-limon px-3 py-1" @click="compartir(i.codigo)">
           Compartir
         </button>
-        <button class="rounded-full border-2 border-tinta bg-white px-3 py-1" @click="copiar(i.codigo)">Copiar</button>
+        <button class="rounded-full border-2 border-tinta bg-papel px-3 py-1" @click="copiar(i.codigo)">Copiar</button>
         <button class="ml-auto underline" @click="anular(i.codigo)">Anular</button>
       </div>
     </div>
 
-    <button class="btn mt-3 w-full py-2 text-sm" :class="invitaciones.length ? 'bg-white' : 'bg-limon'" :disabled="creando" @click="crear">
+    <button class="btn mt-3 w-full py-2 text-sm" :class="invitaciones.length ? 'bg-papel' : 'bg-limon'" :disabled="creando" @click="crear">
       {{ creando ? 'Creando…' : invitaciones.length ? 'Crear otro enlace' : 'Crear enlace de invitación' }}
     </button>
 

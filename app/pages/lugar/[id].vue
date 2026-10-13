@@ -156,7 +156,7 @@ async function recomendar(amigoId: string) {
     </div>
 
     <template v-else-if="lugar">
-      <p v-if="route.query.fotosFallidas" class="sticker mt-4 bg-white px-3 py-2 text-sm font-semibold" role="alert">
+      <p v-if="route.query.fotosFallidas" class="sticker mt-4 bg-papel px-3 py-2 text-sm font-semibold" role="alert">
         La reseña se guardó, pero {{ route.query.fotosFallidas }} foto(s) no se pudieron subir.
       </p>
       <header class="sticker mt-4 p-4" :style="{ background: cat?.color }">
@@ -167,7 +167,7 @@ async function recomendar(amigoId: string) {
         <h1 class="mt-1 font-display text-3xl leading-none font-extrabold">{{ lugar.nombre }}</h1>
         <p v-if="lugar.direccion" class="mt-1 text-sm">{{ lugar.direccion }}</p>
         <div class="mt-3 flex items-center gap-3">
-          <span v-if="lugar.promedio" class="rounded-full border-2 border-tinta bg-white px-3 py-0.5 font-display text-xl font-bold">
+          <span v-if="lugar.promedio" class="rounded-full border-2 border-tinta bg-papel px-3 py-0.5 font-display text-xl font-bold">
             {{ lugar.promedio.toFixed(1) }}
           </span>
           <span class="text-sm font-semibold">
@@ -186,7 +186,7 @@ async function recomendar(amigoId: string) {
         <div class="flex gap-2">
           <button
             class="btn flex-1 px-3 py-2 text-sm"
-            :class="miPendiente ? 'bg-aji' : 'bg-white'"
+            :class="miPendiente ? 'bg-aji' : 'bg-papel'"
             :aria-pressed="!!miPendiente"
             @click="alternarPendiente"
           >
@@ -194,7 +194,7 @@ async function recomendar(amigoId: string) {
           </button>
           <button
             v-if="recomendables.length"
-            class="btn flex-1 bg-white px-3 py-2 text-sm"
+            class="btn flex-1 bg-papel px-3 py-2 text-sm"
             :aria-expanded="recomendando"
             @click="recomendando = !recomendando"
           >
@@ -206,7 +206,7 @@ async function recomendar(amigoId: string) {
           <button
             v-for="a in recomendables"
             :key="a.id"
-            class="rounded-full border-2 border-tinta bg-white px-3 py-1 text-sm font-semibold"
+            class="rounded-full border-2 border-tinta bg-papel px-3 py-1 text-sm font-semibold"
             @click="recomendar(a.id)"
           >
             {{ a.nombre }}
@@ -248,6 +248,7 @@ async function recomendar(amigoId: string) {
 
         <div class="mt-3 flex items-center gap-2">
           <Puntaje :model-value="r.general" :plan="r.plan" solo-lectura />
+          <span v-if="r.privada" class="ml-auto rounded-full border-2 border-tinta bg-chicha px-2 py-0.5 text-xs font-bold">🔒 Solo tú</span>
           <span class="font-display font-bold">{{ NOTAS[r.general - 1] }}</span>
         </div>
 

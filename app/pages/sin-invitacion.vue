@@ -20,6 +20,6 @@ const falla = computed(() => route.query.error === '1')
       <h1 class="mt-3 font-display text-3xl font-bold">Esto es caleta</h1>
       <p class="mt-2">Para entrar necesitas un enlace de invitación. Pídeselo a alguien de la mancha.</p>
     </template>
-    <button class="btn mt-4 bg-white" @click="salir">Salir</button>
+    <button class="btn mt-4 bg-papel" @click="salir">Salir</button>
   </main>
 </template>

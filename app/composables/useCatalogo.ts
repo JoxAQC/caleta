@@ -18,7 +18,14 @@ export function useCatalogo() {
   }
 
   const categoria = (id?: string | null) => categorias.value.find(c => c.id === id)
+
+  // ¿La categoría se muestra en el modo actual? Las de "ambos" salen siempre.
+  const { esNoche } = useModo()
+  const enModo = (id?: string | null) => {
+    const ambito = categoria(id)?.ambito ?? 'ambos'
+    return ambito === 'ambos' || ambito === (esNoche.value ? 'noche' : 'dia')
+  }
   const tag = (id: string) => tags.value.find(t => t.id === id)
 
-  return { categorias, tags, cargar, categoria, tag }
+  return { categorias, tags, cargar, categoria, tag, enModo }
 }

@@ -25,14 +25,14 @@ export type Database = {
           Tables: {
             "categorias": {
                   Row: {
-                    "color": string,"emoji": string,"id": string,"nombre": string,"orden": number
+                    "ambito": string,"color": string,"emoji": string,"id": string,"nombre": string,"orden": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "color": string,"emoji": string,"id": string,"nombre": string,"orden"?: number
+                    "ambito"?: string,"color": string,"emoji": string,"id": string,"nombre": string,"orden"?: number
                   }
                   Update: {
-                    "color"?: string,"emoji"?: string,"id"?: string,"nombre"?: string,"orden"?: number
+                    "ambito"?: string,"color"?: string,"emoji"?: string,"id"?: string,"nombre"?: string,"orden"?: number
                   }
                   Relationships: [
                     
@@ -287,14 +287,14 @@ isOneToOne: false
                   ]
                 },"resenas": {
                   Row: {
-                    "ambiente": number | null,"autor_id": string,"calidad_precio": number | null,"comida": number | null,"creado_en": string,"general": number,"grupo_id": string,"id": string,"lugar_id": string,"nota": string | null,"plan": string | null,"servicio": number | null,"visitado_en": string
+                    "ambiente": number | null,"autor_id": string,"calidad_precio": number | null,"comida": number | null,"creado_en": string,"general": number,"grupo_id": string,"id": string,"lugar_id": string,"nota": string | null,"plan": string | null,"privada": boolean,"servicio": number | null,"visitado_en": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "ambiente"?: number | null,"autor_id": string,"calidad_precio"?: number | null,"comida"?: number | null,"creado_en"?: string,"general": number,"grupo_id": string,"id"?: string,"lugar_id": string,"nota"?: string | null,"plan"?: string | null,"servicio"?: number | null,"visitado_en"?: string
+                    "ambiente"?: number | null,"autor_id": string,"calidad_precio"?: number | null,"comida"?: number | null,"creado_en"?: string,"general": number,"grupo_id": string,"id"?: string,"lugar_id": string,"nota"?: string | null,"plan"?: string | null,"privada"?: boolean,"servicio"?: number | null,"visitado_en"?: string
                   }
                   Update: {
-                    "ambiente"?: number | null,"autor_id"?: string,"calidad_precio"?: number | null,"comida"?: number | null,"creado_en"?: string,"general"?: number,"grupo_id"?: string,"id"?: string,"lugar_id"?: string,"nota"?: string | null,"plan"?: string | null,"servicio"?: number | null,"visitado_en"?: string
+                    "ambiente"?: number | null,"autor_id"?: string,"calidad_precio"?: number | null,"comida"?: number | null,"creado_en"?: string,"general"?: number,"grupo_id"?: string,"id"?: string,"lugar_id"?: string,"nota"?: string | null,"plan"?: string | null,"privada"?: boolean,"servicio"?: number | null,"visitado_en"?: string
                   }
                   Relationships: [
                     {
@@ -325,14 +325,14 @@ isOneToOne: false
                   ]
                 },"tags": {
                   Row: {
-                    "id": string,"nombre": string,"orden": number
+                    "ambito": string,"id": string,"nombre": string,"orden": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "id": string,"nombre": string,"orden"?: number
+                    "ambito"?: string,"id": string,"nombre": string,"orden"?: number
                   }
                   Update: {
-                    "id"?: string,"nombre"?: string,"orden"?: number
+                    "ambito"?: string,"id"?: string,"nombre"?: string,"orden"?: number
                   }
                   Relationships: [
                     
@@ -369,7 +369,16 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "mi_grupo":
+            "lugar_en_mi_grupo":
+{ Args: { "p_lugar": string }; Returns: boolean
+                           },
+"lugar_por_referencia":
+{ Args: { "p_proveedor": string,"p_ref": string }; Returns: string
+                           },
+"lugar_publico":
+{ Args: { "p_lugar": string }; Returns: boolean
+                           },
+"mi_grupo":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
 "reclamar_invitacion":

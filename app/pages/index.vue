@@ -6,7 +6,10 @@ type Orden = 'nota' | 'recientes' | 'cerca'
 
 const route = useRoute()
 const { perfil } = usePerfil()
-const { categorias, categoria, tag, cargar: cargarCatalogo } = useCatalogo()
+const { categorias, categoria, tag, enModo, cargar: cargarCatalogo } = useCatalogo()
+const { esNoche } = useModo()
+// Saltarse el filtro por modo y ver lugares de día y de noche a la vez.
+const verTodo = useState('ver-todo', () => false)
 const { lugares, cargar: cargarLugares } = useLugares()
 const { filtros, activos, pasa, alternar, limpiar } = useFiltros()
 
@@ -28,6 +31,7 @@ async function cargar() {
     await Promise.all([cargarCatalogo(), cargarLugares()])
     if (enfocar && lugares.value.some(l => l.id === enfocar)) {
       // Que ningún filtro previo esconda el lugar recién reseñado.
+      if (!enModo(lugares.value.find(l => l.id === enfocar)?.categoria_id)) verTodo.value = true
       limpiar()
       filtros.value.texto = ''
       filtros.value.categorias = []
@@ -42,11 +46,14 @@ async function cargar() {
 onMounted(cargar)
 
 // Solo se ofrecen como filtro las categorías que ya tienen lugares.
+const delModo = computed(() => lugares.value.filter(l => verTodo.value || enModo(l.categoria_id)))
+
 const categoriasUsadas = computed(() =>
-  categorias.value.filter(c => lugares.value.some(l => l.categoria_id === c.id)),
+  categorias.value.filter(c => delModo.value.some(l => l.categoria_id === c.id)),
 )
 
-const visibles = computed(() => lugares.value.filter(pasa))
+const visibles = computed(() => delModo.value.filter(pasa))
+const ocultosPorModo = computed(() => lugares.value.length - delModo.value.length)
 
 const distancia = (l: Coordenada) => (aqui.value ? distanciaMetros(aqui.value, l) : null)
 
@@ -114,24 +121,25 @@ const ORDENES: { id: Orden, nombre: string }[] = [
           <input
             v-model="filtros.texto"
             type="search"
-            placeholder="Busca en Caleta"
+            placeholder="Buscar"
             aria-label="Buscar entre los lugares de la mancha"
             class="min-w-0 flex-1 bg-transparent font-semibold outline-none placeholder:font-normal placeholder:text-tinta/50"
           >
         </label>
         <button
           class="sticker relative grid size-11 shrink-0 place-items-center rounded-full"
-          :class="activos ? 'bg-limon' : 'bg-white'"
+          :class="activos ? 'bg-limon' : 'bg-papel'"
           aria-label="Filtros"
           @click="panelAbierto = true"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
             <path d="M4 7h16M7 12h10M10 17h4" />
           </svg>
-          <span v-if="activos" class="absolute -top-1 -right-1 grid size-5 place-items-center rounded-full bg-tinta text-xs font-bold text-white">
+          <span v-if="activos" class="absolute -top-1 -right-1 grid size-5 place-items-center rounded-full bg-tinta text-xs font-bold text-papel">
             {{ activos }}
           </span>
         </button>
+        <ModoSwitch />
         <NuxtLink to="/perfil" class="sticker grid size-11 shrink-0 place-items-center rounded-full bg-aji font-bold" aria-label="Tu perfil">
           {{ perfil?.nombre.charAt(0).toUpperCase() }}
         </NuxtLink>
@@ -145,7 +153,7 @@ const ORDENES: { id: Orden, nombre: string }[] = [
             role="tab"
             :aria-selected="vista === v"
             class="px-3 py-1 capitalize"
-            :class="vista === v ? 'bg-tinta text-white' : 'bg-white'"
+            :class="vista === v ? 'bg-tinta text-papel' : 'bg-papel'"
             @click="cambiarVista(v)"
           >
             {{ v }}
@@ -153,9 +161,18 @@ const ORDENES: { id: Orden, nombre: string }[] = [
         </div>
         <div class="-mr-3 flex min-w-0 flex-1 gap-2 overflow-x-auto pr-3 pb-1">
           <button
+            v-if="ocultosPorModo || verTodo"
+            class="shrink-0 rounded-full border-2 border-tinta px-3 py-1 text-sm font-semibold"
+            :class="verTodo ? 'bg-tinta text-papel' : 'bg-papel'"
+            :aria-pressed="verTodo"
+            @click="verTodo = !verTodo"
+          >
+            {{ verTodo ? 'Viendo todo' : esNoche ? '☀️ Ver también de día' : '🌙 Ver también de noche' }}
+          </button>
+          <button
             v-if="lugares.some(l => l.pendiente)"
             class="shrink-0 rounded-full border-2 border-tinta px-3 py-1 text-sm font-semibold"
-            :class="filtros.soloPendientes ? 'bg-aji' : 'bg-white'"
+            :class="filtros.soloPendientes ? 'bg-aji' : 'bg-papel'"
             :aria-pressed="filtros.soloPendientes"
             @click="filtros.soloPendientes = !filtros.soloPendientes"
           >
@@ -164,8 +181,8 @@ const ORDENES: { id: Orden, nombre: string }[] = [
           <button
             v-for="c in categoriasUsadas"
             :key="c.id"
-            class="shrink-0 rounded-full border-2 border-tinta px-3 py-1 text-sm font-semibold"
-            :style="{ background: filtros.categorias.includes(c.id) ? c.color : '#fff' }"
+            class="shrink-0 rounded-full border-2 border-tinta bg-papel px-3 py-1 text-sm font-semibold"
+            :style="filtros.categorias.includes(c.id) ? { background: c.color } : {}"
             :aria-pressed="filtros.categorias.includes(c.id)"
             @click="alternar('categorias', c.id)"
           >
@@ -174,10 +191,10 @@ const ORDENES: { id: Orden, nombre: string }[] = [
         </div>
       </div>
 
-      <p v-if="fotosFallidas" class="sticker bg-white px-3 py-2 text-sm font-semibold" role="alert">
+      <p v-if="fotosFallidas" class="sticker bg-papel px-3 py-2 text-sm font-semibold" role="alert">
         La reseña se guardó, pero {{ fotosFallidas }} foto(s) no se pudieron subir.
       </p>
-      <p v-if="error" class="sticker bg-white px-3 py-2 text-sm font-semibold" role="alert">
+      <p v-if="error" class="sticker bg-papel px-3 py-2 text-sm font-semibold" role="alert">
         {{ error }} <button class="underline" @click="cargar">Reintentar</button>
       </p>
     </header>
@@ -214,13 +231,18 @@ const ORDENES: { id: Orden, nombre: string }[] = [
           </p>
         </NuxtLink>
 
-        <div v-else-if="!lugares.length && !error" class="sticker pointer-events-auto bg-white p-4 text-center">
+        <div v-else-if="!lugares.length && !error" class="sticker pointer-events-auto bg-papel p-4 text-center">
           <Capi :size="64" animo="feliz" class="mx-auto" />
           <p class="font-display text-lg font-bold">El mapa está vacío</p>
           <p class="text-sm">Reseña el primer lugar y aparecerá aquí para toda la mancha.</p>
         </div>
 
-        <div v-else-if="!visibles.length && !error" class="sticker pointer-events-auto bg-white p-4 text-center">
+        <div v-else-if="!delModo.length && !error" class="sticker pointer-events-auto bg-papel p-4 text-center">
+          <p class="font-display text-lg font-bold">{{ esNoche ? 'Aún no hay planes de noche' : 'Aún no hay lugares de día' }}</p>
+          <p class="text-sm">{{ esNoche ? 'Reseña el primer bar, disco o amanecida.' : 'Lo que hay guardado es de noche.' }}</p>
+        </div>
+
+        <div v-else-if="!visibles.length && !error" class="sticker pointer-events-auto bg-papel p-4 text-center">
           <p class="font-display text-lg font-bold">Nada con esos filtros</p>
           <p class="text-sm">Quita alguno para ver más lugares.</p>
         </div>
@@ -234,7 +256,7 @@ const ORDENES: { id: Orden, nombre: string }[] = [
           v-for="o in ORDENES"
           :key="o.id"
           class="shrink-0 rounded-full border-2 border-tinta px-3 py-1 text-sm font-semibold"
-          :class="orden === o.id ? 'bg-tinta text-white' : 'bg-white'"
+          :class="orden === o.id ? 'bg-tinta text-papel' : 'bg-papel'"
           :aria-pressed="orden === o.id"
           @click="ordenarPor(o.id)"
         >

@@ -6,6 +6,7 @@ export const PLANES: { id: PlanId, nombre: string, emoji: string }[] = [
   { id: 'cita', nombre: 'Para cita', emoji: '🌹' },
   { id: 'solo', nombre: 'Solo', emoji: '🎧' },
   { id: 'familia', nombre: 'En familia', emoji: '🏡' },
+  { id: 'juerga', nombre: 'De juerga', emoji: '🪩' },
 ]
 
 export const EMOJI_SIN_PLAN = '🍋'
@@ -37,6 +38,9 @@ export function etiquetaPrecio(precio?: number | null) {
 }
 
 export const LIMA = { lat: -12.1, lng: -77.03 }
+
+export const estiloMapa = (noche: boolean) =>
+  `https://tiles.openfreemap.org/styles/${noche ? 'dark' : 'positron'}`
 
 export function distanciaMetros(a: { lat: number, lng: number }, b: { lat: number, lng: number }) {
   const rad = Math.PI / 180

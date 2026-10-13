@@ -78,7 +78,7 @@ async function borrar(id: string) {
         v-for="e in EMOJIS"
         :key="e"
         class="rounded-full border-2 border-tinta px-2.5 py-0.5 text-sm font-bold"
-        :class="mia(e) ? 'bg-limon' : 'bg-white'"
+        :class="mia(e) ? 'bg-limon' : 'bg-papel'"
         :aria-pressed="mia(e)"
         :aria-label="`Reaccionar con ${e}`"
         @click="reaccionar(e)"
@@ -108,9 +108,9 @@ async function borrar(id: string) {
         maxlength="500"
         placeholder="Yo pedí el lomo y también cumple"
         aria-label="Escribe un comentario"
-        class="min-w-0 flex-1 rounded-full border-2 border-tinta bg-white px-3 py-1.5 text-sm outline-none placeholder:text-tinta/50"
+        class="min-w-0 flex-1 rounded-full border-2 border-tinta bg-papel px-3 py-1.5 text-sm outline-none placeholder:text-tinta/50"
       >
-      <button class="rounded-full border-2 border-tinta bg-tinta px-3 text-sm font-bold text-white disabled:opacity-50" :disabled="!texto.trim() || enviando">
+      <button class="rounded-full border-2 border-tinta bg-tinta px-3 text-sm font-bold text-papel disabled:opacity-50" :disabled="!texto.trim() || enviando">
         Enviar
       </button>
     </form>

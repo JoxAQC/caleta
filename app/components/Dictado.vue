@@ -131,12 +131,12 @@ const tiempo = computed(() => `${Math.floor(segundos.value / 60)}:${String(segun
       v-if="disponible"
       type="button"
       class="btn w-full"
-      :class="estado === 'grabando' ? 'bg-rocoto text-white' : 'bg-white'"
+      :class="estado === 'grabando' ? 'bg-rocoto text-white' : 'bg-papel'"
       :disabled="estado === 'transcribiendo'"
       @click="estado === 'grabando' ? detener() : iniciar()"
     >
       <template v-if="estado === 'grabando'">
-        <span class="size-3 animate-pulse rounded-sm bg-white" /> Detener · {{ tiempo }}
+        <span class="size-3 animate-pulse rounded-sm bg-papel" /> Detener · {{ tiempo }}
       </template>
       <template v-else-if="estado === 'transcribiendo'">Pasando a texto…</template>
       <template v-else><span class="text-xl leading-none">🎙️</span> Dictar la nota</template>

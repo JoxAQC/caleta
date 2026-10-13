@@ -2,12 +2,13 @@
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { Map as MapaGL } from 'maplibre-gl'
 import type { Coordenada } from '~/utils/tipos'
-import { distanciaMetros, LIMA } from '~/utils/catalogo'
+import { distanciaMetros, estiloMapa, LIMA } from '~/utils/catalogo'
 
 // Mapa con un pin fijo al centro: se elige la ubicación moviendo el mapa.
 const posicion = defineModel<Coordenada | null>({ required: true })
 const props = defineProps<{ bloqueado?: boolean }>()
 
+const { esNoche } = useModo()
 const contenedor = ref<HTMLElement>()
 let mapa: MapaGL | undefined
 
@@ -16,7 +17,7 @@ onMounted(async () => {
   const inicio = posicion.value ?? LIMA
   mapa = new gl.Map({
     container: contenedor.value!,
-    style: 'https://tiles.openfreemap.org/styles/positron',
+    style: estiloMapa(esNoche.value),
     center: [inicio.lng, inicio.lat],
     zoom: posicion.value ? 16 : 12,
     attributionControl: { compact: true },
@@ -45,6 +46,8 @@ watch(posicion, (p) => {
     mapa.jumpTo({ center: [p.lng, p.lat], zoom: Math.max(mapa.getZoom(), 16) })
   }
 })
+
+watch(esNoche, noche => mapa?.setStyle(estiloMapa(noche)))
 
 onBeforeUnmount(() => mapa?.remove())
 </script>

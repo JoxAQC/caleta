@@ -1,9 +1,17 @@
 @import "tailwindcss";
 
 @theme {
+  /* Tinta: texto y contornos. Papel: superficies. Garúa: fondo de página. */
   --color-tinta: #2b1b3d;
-  --color-limon: #c6e03a;
+  --color-papel: #ffffff;
   --color-garua: #eef1ec;
+  /* Texto sobre rellenos de color: siempre oscuro, en día y en noche. */
+  --color-sobre: #2b1b3d;
+  /* Fondo de las pantallas "de portada" (login, wizard). */
+  --color-escena: #c6e03a;
+  --color-sombra: #2b1b3d;
+
+  --color-limon: #c6e03a;
   --color-rocoto: #f0492e;
   --color-rocoto-suave: #f79c8c;
   --color-aji: #ffb81c;
@@ -14,8 +22,26 @@
   --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
 
-  --shadow-sticker: 3px 3px 0 var(--color-tinta);
-  --shadow-sticker-lg: 5px 5px 0 var(--color-tinta);
+  --shadow-sticker: 3px 3px 0 var(--color-sombra);
+  --shadow-sticker-lg: 5px 5px 0 var(--color-sombra);
+}
+
+/* Modo noche: fondo morado casi negro, contornos claros y acentos de neón. */
+html.noche {
+  --color-tinta: #f1eaff;
+  --color-papel: #251736;
+  --color-garua: #140b1e;
+  --color-escena: #140b1e;
+  --color-sombra: #b57bff;
+
+  --color-limon: #c8ff3d;
+  --color-rocoto: #ff5a45;
+  --color-rocoto-suave: #ff8a7a;
+  --color-aji: #ffc53d;
+  --color-chicha: #b57bff;
+  --color-mar: #3de0f0;
+
+  color-scheme: dark;
 }
 
 html,
@@ -34,7 +60,7 @@ body {
 
 @layer components {
   .sticker {
-    @apply rounded-2xl border-2 border-tinta bg-white shadow-sticker;
+    @apply rounded-2xl border-2 border-tinta bg-papel shadow-sticker;
   }
 
   .btn {
@@ -48,4 +74,36 @@ body {
   .btn:disabled {
     @apply opacity-60;
   }
+
+  /* El color del texto sigue al relleno, para que cada superficie se lea en los dos modos. */
+  .sticker,
+  .bg-papel,
+  .bg-garua,
+  .bg-escena {
+    color: var(--color-tinta);
+  }
+
+  .bg-tinta {
+    color: var(--color-papel);
+  }
+
+  .bg-limon,
+  .bg-aji,
+  .bg-mar,
+  .bg-chicha,
+  .bg-rocoto-suave,
+  /* Rellenos puestos en línea: colores de categoría y avatares. */
+  [style*="background"] {
+    color: var(--color-sobre);
+  }
+
+  html:not(.noche) .bg-escena {
+    color: var(--color-sobre);
+  }
+}
+
+/* Controles del mapa legibles sobre el estilo oscuro. */
+html.noche .maplibregl-ctrl-group,
+html.noche .maplibregl-ctrl-attrib {
+  filter: invert(1) hue-rotate(180deg);
 }

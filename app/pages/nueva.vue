@@ -11,7 +11,8 @@ const MAX_FOTOS = 4
 const route = useRoute()
 const supabase = useSupabaseClient()
 const { perfil } = usePerfil()
-const { categorias, tags, categoria, cargar: cargarCatalogo } = useCatalogo()
+const { categorias, tags, categoria, enModo, cargar: cargarCatalogo } = useCatalogo()
+const { esNoche } = useModo()
 
 const paso = ref(1)
 const lugaresGrupo = ref<LugarResumen[]>([])
@@ -40,6 +41,7 @@ const tagsElegidos = ref<string[]>([])
 
 // Paso 4: fotos y nota
 const nota = ref('')
+const privada = ref(false)
 const fotos = ref<{ archivo: File, vista: string }[]>([])
 
 const guardando = ref(false)
@@ -133,6 +135,20 @@ function soltarExistente() {
   precio.value = null
 }
 
+// --- Paso 2 ---
+// Se ofrecen primero las categorías del modo actual; el resto queda a un toque.
+const todasLasCategorias = ref(false)
+const categoriasOfrecidas = computed(() =>
+  categorias.value.filter(c => todasLasCategorias.value || enModo(c.id) || c.id === categoriaId.value),
+)
+
+// Los tags de noche aparecen si el lugar es de noche, o en modo noche si sirve para ambos.
+const tagsOfrecidos = computed(() => {
+  const ambito = categoria(categoriaId.value)?.ambito
+  const deNoche = ambito === 'noche' || (ambito === 'ambos' && esNoche.value)
+  return tags.value.filter(t => t.ambito === 'ambos' || deNoche || tagsElegidos.value.includes(t.id))
+})
+
 // --- Paso 3 ---
 watch(aspectos, () => {
   if (generalManual.value) return
@@ -223,7 +239,20 @@ async function asegurarLugar() {
     })
     .select('id')
     .single()
-  if (e) throw e
+  if (e) {
+    // Otra persona del grupo ya registró este local, pero en privado: se reutiliza.
+    if (e.code === '23505' && origen.value) {
+      const { data: previo } = await supabase.rpc('lugar_por_referencia', {
+        p_proveedor: origen.value.proveedor,
+        p_ref: origen.value.ref_externa,
+      })
+      if (previo) {
+        existente.value = { id: previo } as LugarResumen
+        return previo as string
+      }
+    }
+    throw e
+  }
   // Si el guardado falla más adelante, el reintento no duplica el lugar.
   existente.value = { id: data.id } as LugarResumen
   return data.id
@@ -269,6 +298,7 @@ async function guardar() {
         calidad_precio: conAspectos && aspectos.calidad_precio ? aspectos.calidad_precio : null,
         plan: plan.value,
         nota: nota.value.trim() || null,
+        privada: privada.value,
         visitado_en: hoyLocal(),
       })
       .select('id')
@@ -309,7 +339,7 @@ async function guardar() {
 </script>
 
 <template>
-  <main class="mx-auto flex h-full max-w-md flex-col bg-limon">
+  <main class="mx-auto flex h-full max-w-md flex-col bg-escena">
     <header class="px-5 pt-[max(1rem,env(safe-area-inset-top))]">
       <div class="flex items-center gap-3">
         <button class="text-sm font-bold" @click="atras">← {{ paso === 1 ? 'Cancelar' : 'Atrás' }}</button>
@@ -318,7 +348,7 @@ async function guardar() {
             v-for="n in 4"
             :key="n"
             class="h-2 flex-1 rounded-full border-2 border-tinta"
-            :class="n <= paso ? 'bg-tinta' : 'bg-white'"
+            :class="n <= paso ? 'bg-tinta' : 'bg-papel'"
           />
         </div>
       </div>
@@ -392,10 +422,10 @@ async function guardar() {
       <section v-else-if="paso === 2">
         <div class="grid grid-cols-2 gap-2.5">
           <button
-            v-for="c in categorias"
+            v-for="c in categoriasOfrecidas"
             :key="c.id"
             class="flex items-center gap-2 rounded-2xl border-2 border-tinta px-3 py-3 text-left font-semibold"
-            :class="categoriaId === c.id ? 'shadow-sticker' : 'bg-white'"
+            :class="categoriaId === c.id ? 'shadow-sticker' : 'bg-papel'"
             :style="categoriaId === c.id ? { background: c.color } : {}"
             :aria-pressed="categoriaId === c.id"
             @click="categoriaId = c.id"
@@ -404,6 +434,10 @@ async function guardar() {
           </button>
         </div>
 
+        <button class="mt-3 text-sm font-bold underline" @click="todasLasCategorias = !todasLasCategorias">
+          {{ todasLasCategorias ? 'Ver solo las de este modo' : esNoche ? 'Ver también las de día' : 'Ver también las de noche' }}
+        </button>
+
         <h2 class="mt-6 font-display text-xl font-bold">¿Cuánto se gasta?</h2>
         <p class="text-sm">Opcional</p>
         <div class="mt-2 grid grid-cols-4 gap-2">
@@ -411,7 +445,7 @@ async function guardar() {
             v-for="p in PRECIOS"
             :key="p.valor"
             class="rounded-2xl border-2 border-tinta px-1 py-2 text-center"
-            :class="precio === p.valor ? 'bg-tinta text-white' : 'bg-white'"
+            :class="precio === p.valor ? 'bg-tinta text-papel' : 'bg-papel'"
             :aria-pressed="precio === p.valor"
             @click="precio = precio === p.valor ? null : p.valor"
           >
@@ -429,7 +463,7 @@ async function guardar() {
             v-for="p in PLANES"
             :key="p.id"
             class="rounded-full border-2 border-tinta px-3 py-1 text-sm font-semibold"
-            :class="plan === p.id ? 'bg-tinta text-white' : 'bg-white'"
+            :class="plan === p.id ? 'bg-tinta text-papel' : 'bg-papel'"
             :aria-pressed="plan === p.id"
             @click="plan = plan === p.id ? null : p.id"
           >
@@ -458,10 +492,10 @@ async function guardar() {
 
         <div class="mt-4 flex flex-wrap gap-2">
           <button
-            v-for="t in tags"
+            v-for="t in tagsOfrecidos"
             :key="t.id"
             class="rounded-full border-2 border-tinta px-3 py-1 text-sm font-semibold"
-            :class="tagsElegidos.includes(t.id) ? 'bg-tinta text-white' : 'bg-white'"
+            :class="tagsElegidos.includes(t.id) ? 'bg-tinta text-papel' : 'bg-papel'"
             :aria-pressed="tagsElegidos.includes(t.id)"
             @click="alternarTag(t.id)"
           >
@@ -476,20 +510,28 @@ async function guardar() {
           <div v-for="(f, i) in fotos" :key="f.vista" class="relative aspect-square">
             <img :src="f.vista" alt="" class="size-full rounded-xl border-2 border-tinta object-cover">
             <button
-              class="absolute -top-2 -right-2 grid size-6 place-items-center rounded-full border-2 border-tinta bg-white text-sm leading-none font-bold"
+              class="absolute -top-2 -right-2 grid size-6 place-items-center rounded-full border-2 border-tinta bg-papel text-sm leading-none font-bold"
               :aria-label="`Quitar foto ${i + 1}`"
               @click="quitarFoto(i)"
             >×</button>
           </div>
           <label
             v-if="fotos.length < MAX_FOTOS"
-            class="grid aspect-square cursor-pointer place-items-center rounded-xl border-2 border-dashed border-tinta bg-white/60 text-center text-xs font-bold"
+            class="grid aspect-square cursor-pointer place-items-center rounded-xl border-2 border-dashed border-tinta bg-papel/60 text-center text-xs font-bold"
           >
             <span><span class="block text-2xl leading-none">📷</span>Agregar</span>
             <input type="file" accept="image/*" multiple class="sr-only" @change="agregarFotos">
           </label>
         </div>
         <p class="mt-2 text-sm">Hasta {{ MAX_FOTOS }} fotos. Se achican antes de subir.</p>
+
+        <label class="sticker mt-4 flex cursor-pointer items-center gap-3 p-3">
+          <input v-model="privada" type="checkbox" class="size-5 accent-chicha">
+          <span class="leading-tight">
+            <span class="block font-bold">🔒 Solo para mí</span>
+            <span class="block text-sm">Nadie más de la mancha verá esta reseña.</span>
+          </span>
+        </label>
 
         <textarea
           v-model="nota"
@@ -507,7 +549,7 @@ async function guardar() {
       <p v-if="error" class="mb-2 text-center text-sm font-bold text-rocoto" role="alert">{{ error }}</p>
       <button
         v-if="paso < 4"
-        class="btn w-full bg-tinta text-lg text-white shadow-[3px_3px_0_#fff]"
+        class="btn w-full bg-tinta text-lg text-papel shadow-[3px_3px_0_var(--color-papel)]"
         :disabled="!puedeSeguir"
         @click="siguiente"
       >
@@ -521,7 +563,7 @@ async function guardar() {
       >
         🔖 Aún no voy: guardar en "Quiero ir"
       </button>
-      <button v-else class="btn w-full bg-tinta text-lg text-white shadow-[3px_3px_0_#fff]" :disabled="guardando" @click="guardar">
+      <button v-if="paso === 4" class="btn w-full bg-tinta text-lg text-papel shadow-[3px_3px_0_var(--color-papel)]" :disabled="guardando" @click="guardar">
         {{ guardando ? 'Guardando…' : 'Guardar reseña' }}
       </button>
     </footer>

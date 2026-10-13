@@ -64,7 +64,7 @@ const visible = computed(() => !instalada.value && !oculto.value && (esIOS.value
     </div>
 
     <template v-if="esIOS">
-      <button class="btn mt-3 w-full bg-white py-2 text-sm" :aria-expanded="pasosAbiertos" @click="pasosAbiertos = !pasosAbiertos">
+      <button class="btn mt-3 w-full bg-papel py-2 text-sm" :aria-expanded="pasosAbiertos" @click="pasosAbiertos = !pasosAbiertos">
         {{ pasosAbiertos ? 'Ocultar pasos' : 'Ver cómo instalarla' }}
       </button>
       <ol v-if="pasosAbiertos" class="mt-3 list-decimal space-y-1 pl-5 text-sm font-semibold">
@@ -74,6 +74,6 @@ const visible = computed(() => !instalada.value && !oculto.value && (esIOS.value
         <li>Confirma con "Agregar".</li>
       </ol>
     </template>
-    <button v-else class="btn mt-3 w-full bg-tinta py-2 text-sm text-white" @click="instalar">Instalar</button>
+    <button v-else class="btn mt-3 w-full bg-tinta py-2 text-sm text-papel" @click="instalar">Instalar</button>
   </section>
 </template>

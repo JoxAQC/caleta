@@ -41,7 +41,10 @@ async function entrarDemo(u: (typeof USUARIOS_DEMO)[number]) {
 </script>
 
 <template>
-  <main class="flex min-h-full flex-col items-center justify-between gap-8 bg-limon px-6 pt-14 pb-10">
+  <main class="relative flex min-h-full flex-col items-center justify-between gap-8 bg-escena px-6 pt-14 pb-10">
+    <div class="absolute top-4 right-4">
+      <ModoSwitch />
+    </div>
     <div class="flex flex-col items-center text-center">
       <Capi :size="150" animo="feliz" />
       <h1 class="mt-3 font-display text-6xl font-extrabold tracking-tight">Caleta</h1>
@@ -57,7 +60,7 @@ async function entrarDemo(u: (typeof USUARIOS_DEMO)[number]) {
           <button
             v-for="u in USUARIOS_DEMO"
             :key="u.email"
-            class="btn bg-white"
+            class="btn bg-papel"
             :disabled="cargando"
             @click="entrarDemo(u)"
           >
@@ -70,7 +73,7 @@ async function entrarDemo(u: (typeof USUARIOS_DEMO)[number]) {
       </template>
 
       <template v-else>
-        <button class="btn w-full bg-white text-lg" :disabled="cargando" @click="entrarConGoogle">
+        <button class="btn w-full bg-papel text-lg" :disabled="cargando" @click="entrarConGoogle">
           <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
             <path fill="#EA4335" d="M24 9.5c3.540 0 6.710 1.220 9.210 3.600l6.850-6.850C35.900 2.380 30.470 0 24 0 14.620 0 6.510 5.380 2.560 13.220l7.980 6.190C12.430 13.720 17.740 9.500 24 9.500z" />
             <path fill="#4285F4" d="M46.980 24.550c0-1.570-.150-3.090-.380-4.550H24v9.020h12.940c-.580 2.960-2.260 5.480-4.780 7.180l7.730 6c4.510-4.180 7.090-10.360 7.090-17.650z" />

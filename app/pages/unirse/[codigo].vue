@@ -11,7 +11,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="flex min-h-full flex-col items-center justify-center gap-4 bg-limon">
+  <main class="flex min-h-full flex-col items-center justify-center gap-4 bg-escena">
     <Capi :size="120" animo="feliz" class="animate-bounce" />
     <p class="font-display text-xl font-bold">Abriendo tu invitación…</p>
   </main>
