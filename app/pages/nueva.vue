@@ -240,7 +240,7 @@ async function guardarParaDespues() {
       .from('pendientes')
       .upsert({ usuario_id: perfil.value.id, lugar_id: lugarId }, { onConflict: 'usuario_id,lugar_id', ignoreDuplicates: true })
     if (e) throw e
-    await navigateTo(`/lugar/${lugarId}`)
+    await navigateTo({ path: '/', query: { lugar: lugarId } })
   }
   catch {
     error.value = 'No se pudo guardar el lugar. Intenta de nuevo.'
@@ -298,7 +298,8 @@ async function guardar() {
       }
     }
 
-    await navigateTo({ path: `/lugar/${lugarId}`, query: fallidas ? { fotosFallidas: String(fallidas) } : {} })
+    // De vuelta al mapa, acercado al lugar recién reseñado.
+    await navigateTo({ path: '/', query: { lugar: lugarId, ...(fallidas ? { fotosFallidas: String(fallidas) } : {}) } })
   }
   catch {
     error.value = 'No se pudo guardar la reseña. Intenta de nuevo.'

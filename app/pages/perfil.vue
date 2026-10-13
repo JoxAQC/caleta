@@ -79,6 +79,8 @@ function verPendientes() {
       </ul>
     </section>
 
-    <button class="btn mt-auto bg-white" @click="salir">Cerrar sesión</button>
+    <div class="mt-auto pt-8">
+      <button class="btn w-full bg-rocoto-suave" @click="salir">Cerrar sesión</button>
+    </div>
   </main>
 </template>

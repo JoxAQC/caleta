@@ -4,10 +4,15 @@ import { distanciaMetros, etiquetaPrecio } from '~/utils/catalogo'
 
 type Orden = 'nota' | 'recientes' | 'cerca'
 
+const route = useRoute()
 const { perfil } = usePerfil()
 const { categorias, categoria, tag, cargar: cargarCatalogo } = useCatalogo()
 const { lugares, cargar: cargarLugares } = useLugares()
-const { filtros, activos, pasa, alternar } = useFiltros()
+const { filtros, activos, pasa, alternar, limpiar } = useFiltros()
+
+// Al volver de guardar una reseña, el mapa abre sobre ese lugar.
+const enfocar = typeof route.query.lugar === 'string' ? route.query.lugar : null
+const fotosFallidas = Number(route.query.fotosFallidas) || 0
 
 const vista = useState<'mapa' | 'lista'>('vista', () => 'mapa')
 const orden = useState<Orden>('orden', () => 'nota')
@@ -21,6 +26,14 @@ async function cargar() {
   error.value = ''
   try {
     await Promise.all([cargarCatalogo(), cargarLugares()])
+    if (enfocar && lugares.value.some(l => l.id === enfocar)) {
+      // Que ningún filtro previo esconda el lugar recién reseñado.
+      limpiar()
+      filtros.value.texto = ''
+      filtros.value.categorias = []
+      vista.value = 'mapa'
+      seleccionado.value = enfocar
+    }
   }
   catch {
     error.value = 'No se pudieron cargar los lugares.'
@@ -161,6 +174,9 @@ const ORDENES: { id: Orden, nombre: string }[] = [
         </div>
       </div>
 
+      <p v-if="fotosFallidas" class="sticker bg-white px-3 py-2 text-sm font-semibold" role="alert">
+        La reseña se guardó, pero {{ fotosFallidas }} foto(s) no se pudieron subir.
+      </p>
       <p v-if="error" class="sticker bg-white px-3 py-2 text-sm font-semibold" role="alert">
         {{ error }} <button class="underline" @click="cargar">Reintentar</button>
       </p>
@@ -168,7 +184,7 @@ const ORDENES: { id: Orden, nombre: string }[] = [
 
     <!-- Mapa -->
     <div v-show="vista === 'mapa'" class="relative min-h-0 flex-1 border-t-2 border-tinta">
-      <MapaLugares :lugares="visibles" :seleccionado="seleccionado" @seleccionar="seleccionado = $event" />
+      <MapaLugares :lugares="visibles" :seleccionado="seleccionado" :enfocar="enfocar" @seleccionar="seleccionado = $event" />
 
       <div class="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-3 p-4 pb-24">
         <NuxtLink v-if="lugar" :to="`/lugar/${lugar.id}`" class="sticker pointer-events-auto block p-4">

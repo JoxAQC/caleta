@@ -4,7 +4,11 @@ import type { Map as MapaGL, Marker } from 'maplibre-gl'
 import type { LugarRico } from '~/composables/useLugares'
 import { LIMA } from '~/utils/catalogo'
 
-const props = defineProps<{ lugares: LugarRico[], seleccionado?: string | null }>()
+// enfocar: id del lugar en el que debe abrir el mapa (por ejemplo, el recién reseñado).
+// Sin él, el mapa abre en la ubicación de la persona si dio permiso.
+const props = defineProps<{ lugares: LugarRico[], seleccionado?: string | null, enfocar?: string | null }>()
+
+const ZOOM_CERCA = 15
 const emit = defineEmits<{ seleccionar: [id: string | null] }>()
 
 const { categoria } = useCatalogo()
@@ -12,6 +16,16 @@ const contenedor = ref<HTMLElement>()
 let mapa: MapaGL | undefined
 let gl: typeof import('maplibre-gl') | undefined
 let marcadores: Marker[] = []
+let enfoquePendiente = !!props.enfocar
+
+// Los lugares pueden llegar después que el mapa: se intenta en ambos momentos.
+function enfocarLugar() {
+  if (!enfoquePendiente || !mapa) return
+  const l = props.lugares.find(x => x.id === props.enfocar)
+  if (!l) return
+  enfoquePendiente = false
+  mapa.jumpTo({ center: [l.lng, l.lat], zoom: ZOOM_CERCA + 1 })
+}
 
 function pintar() {
   if (!mapa || !gl) return
@@ -43,15 +57,25 @@ onMounted(async () => {
     zoom: 12,
     attributionControl: { compact: true },
   })
-  mapa.addControl(
-    new gl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true }),
-    'bottom-right',
-  )
+  const ubicacion = new gl.GeolocateControl({
+    positionOptions: { enableHighAccuracy: true },
+    trackUserLocation: true,
+    fitBoundsOptions: { maxZoom: ZOOM_CERCA },
+  })
+  mapa.addControl(ubicacion, 'bottom-right')
   mapa.on('click', () => emit('seleccionar', null))
+  mapa.on('load', () => {
+    // Al abrir, acerca a donde está la persona; si no da permiso, se queda en la vista de Lima.
+    if (props.enfocar) enfocarLugar()
+    else ubicacion.trigger()
+  })
   pintar()
 })
 
-watch(() => [props.lugares, props.seleccionado], pintar)
+watch(() => [props.lugares, props.seleccionado], () => {
+  pintar()
+  enfocarLugar()
+})
 
 watch(() => props.seleccionado, (id) => {
   const l = props.lugares.find(x => x.id === id)
