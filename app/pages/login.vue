@@ -5,6 +5,9 @@ const supabase = useSupabaseClient()
 const demo = useRuntimeConfig().public.demoLogin
 const cargando = ref(false)
 const error = ref('')
+const invitado = ref(false)
+
+onMounted(() => (invitado.value = !!invitacionGuardada()))
 
 async function entrarConGoogle() {
   cargando.value = true
@@ -76,7 +79,9 @@ async function entrarDemo(u: (typeof USUARIOS_DEMO)[number]) {
           </svg>
           {{ cargando ? 'Abriendo Google…' : 'Entrar con Google' }}
         </button>
-        <p class="mt-4 text-center text-sm">Solo entran los correos invitados.</p>
+        <p class="mt-4 text-center text-sm" :class="invitado ? 'font-bold' : ''">
+          {{ invitado ? 'Tienes una invitación a la mancha. Entra para aceptarla.' : 'Solo se entra con invitación.' }}
+        </p>
       </template>
 
       <p v-if="error" class="mt-3 text-center text-sm font-bold text-rocoto" role="alert">{{ error }}</p>

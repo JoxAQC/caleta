@@ -51,7 +51,8 @@ export default defineNuxtConfig({
     redirectOptions: {
       login: '/login',
       callback: '/confirm',
-      exclude: [],
+      // Los enlaces de invitación se abren sin sesión.
+      exclude: ['/unirse/*'],
     },
   },
 

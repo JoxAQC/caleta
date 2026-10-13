@@ -1,7 +1,7 @@
 const RUTAS_LIBRES = ['/login', '/confirm', '/sin-invitacion']
 
 export default defineNuxtRouteMiddleware(async (to) => {
-  if (RUTAS_LIBRES.includes(to.path)) return
+  if (RUTAS_LIBRES.includes(to.path) || to.path.startsWith('/unirse/')) return
 
   const { data } = await useSupabaseClient().auth.getSession()
   if (!data.session) return navigateTo('/login')

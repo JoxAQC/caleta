@@ -161,8 +161,15 @@ function agregarFotos(e: Event) {
   input.value = ''
 }
 
-function agregarDictado(texto: string) {
-  nota.value = [nota.value.trim(), texto].filter(Boolean).join(' ').slice(0, 1000)
+// Lo que ya estaba escrito cuando empezó el dictado; lo dictado se pone a continuación.
+let notaAntesDeDictar = ''
+
+function iniciarDictado() {
+  notaAntesDeDictar = nota.value.trim()
+}
+
+function ponerDictado(texto: string) {
+  nota.value = [notaAntesDeDictar, texto].filter(Boolean).join(' ').slice(0, 1000)
 }
 
 function quitarFoto(i: number) {
@@ -491,7 +498,7 @@ async function guardar() {
           aria-label="Nota para la mancha"
           class="sticker mt-4 w-full resize-none p-4 outline-none placeholder:text-tinta/50"
         />
-        <Dictado class="mt-3" @texto="agregarDictado" />
+        <Dictado class="mt-3" @inicio="iniciarDictado" @texto="ponerDictado" />
       </section>
     </div>
 

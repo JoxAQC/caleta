@@ -97,6 +97,32 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"invitaciones": {
+                  Row: {
+                    "anulada": boolean,"codigo": string,"creado_en": string,"creado_por": string,"expira_en": string,"grupo_id": string,"usos": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "anulada"?: boolean,"codigo"?: string,"creado_en"?: string,"creado_por": string,"expira_en"?: string,"grupo_id": string,"usos"?: number
+                  }
+                  Update: {
+                    "anulada"?: boolean,"codigo"?: string,"creado_en"?: string,"creado_por"?: string,"expira_en"?: string,"grupo_id"?: string,"usos"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "invitaciones_creado_por_fkey"
+      columns: ["creado_por"]
+isOneToOne: false
+      referencedRelation: "perfiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "invitaciones_grupo_id_fkey"
+      columns: ["grupo_id"]
+isOneToOne: false
+      referencedRelation: "grupos"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"invitados": {
                   Row: {
                     "creado_en": string,"email": string,"grupo_id": string
@@ -347,7 +373,7 @@ isOneToOne: false
 { Args: Record<PropertyKey, never>; Returns: string
                            },
 "reclamar_invitacion":
-{ Args: Record<PropertyKey, never>; Returns: {
+{ Args: { "p_codigo"?: string }; Returns: {
               "avatar_url": string | null,
 "creado_en": string,
 "grupo_id": string,

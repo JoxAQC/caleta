@@ -1,7 +1,9 @@
 <script setup lang="ts">
 // Nota de voz que termina como texto. La grabación nunca se guarda:
 // en modo 'navegador' ni siquiera existe; en modo 'servidor' se descarta al transcribir.
-const emit = defineEmits<{ texto: [texto: string] }>()
+// 'inicio' avisa que empieza un dictado; 'texto' trae TODO lo dictado desde ese inicio
+// (no un fragmento), así quien lo recibe reemplaza en vez de ir sumando.
+const emit = defineEmits<{ inicio: [], texto: [texto: string] }>()
 
 const MAX_SEGUNDOS = 90
 
@@ -36,13 +38,19 @@ function dictarEnNavegador() {
   reconocedor.lang = 'es-PE'
   reconocedor.continuous = true
   reconocedor.interimResults = true
+  // Chrome en Android entrega cada resultado final con la frase acumulada completa
+  // ("pues", "pues muy", "pues muy buena"…); en escritorio cada final es un tramo nuevo.
+  const acumulativo = /Android/i.test(navigator.userAgent)
   reconocedor.onresult = (e: any) => {
-    parcial.value = ''
-    for (let i = e.resultIndex; i < e.results.length; i++) {
+    let finales = ''
+    let interino = ''
+    for (let i = 0; i < e.results.length; i++) {
       const frase = e.results[i][0].transcript.trim()
-      if (e.results[i].isFinal) emit('texto', frase)
-      else parcial.value += `${frase} `
+      if (!e.results[i].isFinal) interino = acumulativo ? frase : `${interino} ${frase}`
+      else finales = acumulativo ? frase : `${finales} ${frase}`
     }
+    parcial.value = interino.trim()
+    if (finales.trim()) emit('texto', finales.trim())
   }
   reconocedor.onerror = (e: any) => {
     if (e.error === 'not-allowed' || e.error === 'service-not-allowed') error.value = 'Activa el permiso del micrófono para dictar.'
@@ -85,6 +93,7 @@ async function iniciar() {
   try {
     if (modo === 'servidor') await grabarParaServidor()
     else dictarEnNavegador()
+    emit('inicio')
     estado.value = 'grabando'
     iniciarReloj()
   }

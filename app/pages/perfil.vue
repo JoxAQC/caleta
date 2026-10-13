@@ -56,6 +56,8 @@ function verPendientes() {
 
     <InstalarApp class="mt-5" />
 
+    <InvitarMancha class="mt-5" />
+
     <section class="sticker mt-5 p-4">
       <h2 class="font-display text-lg font-bold">La mancha</h2>
       <p v-if="error" class="mt-2 text-sm font-semibold" role="alert">No se pudo cargar la lista.</p>
