@@ -11,7 +11,7 @@ const error = ref(false)
 onMounted(async () => {
   const [p, r, q] = await Promise.all([
     supabase.from('perfiles').select('id, nombre, avatar_url').order('nombre'),
-    supabase.from('resenas').select('autor_id'),
+    supabase.from('resenas').select('autor_id').is('borrada_en', null),
     supabase.from('pendientes').select('lugar_id', { count: 'exact', head: true }).eq('usuario_id', perfil.value?.id ?? ''),
   ])
   if (p.error || r.error || q.error) {

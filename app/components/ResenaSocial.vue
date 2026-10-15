@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type { Comentario, Reaccion } from '~/utils/tipos'
+import { fechaHora } from '~/utils/catalogo'
 
 const EMOJIS = ['🔥', '😋', '👀', '😂']
 
-const props = defineProps<{ resenaId: string, reacciones: Reaccion[], comentarios: Comentario[] }>()
+// soloComentarios: la reseña fue borrada; quedan sus comentarios, sin reacciones ni comentarios nuevos.
+const props = defineProps<{ resenaId: string, reacciones: Reaccion[], comentarios: Comentario[], soloComentarios?: boolean }>()
 
 const supabase = useSupabaseClient()
 const { perfil } = usePerfil()
@@ -49,7 +51,7 @@ async function comentar() {
   const { data, error: e } = await supabase
     .from('comentarios')
     .insert({ resena_id: props.resenaId, autor_id: yo.id, texto: limpio })
-    .select('id, texto, creado_en, autor_id')
+    .select('id, texto, creado_en, editado_en, autor_id')
     .single()
   enviando.value = false
   if (e) {
@@ -60,7 +62,44 @@ async function comentar() {
   texto.value = ''
 }
 
+// Edición en línea de un comentario propio.
+const editandoId = ref<string | null>(null)
+const textoEdicion = ref('')
+const porBorrar = ref<string | null>(null)
+// Comentario editado cuya fecha de edición se está mostrando.
+const verEdicion = ref<string | null>(null)
+
+function empezarEdicion(c: Comentario) {
+  porBorrar.value = null
+  editandoId.value = c.id
+  textoEdicion.value = c.texto
+}
+
+async function guardarEdicion(c: Comentario) {
+  const limpio = textoEdicion.value.trim()
+  if (!limpio) return
+  if (limpio === c.texto) {
+    editandoId.value = null
+    return
+  }
+  error.value = ''
+  const { data, error: e } = await supabase
+    .from('comentarios')
+    .update({ texto: limpio })
+    .eq('id', c.id)
+    .select('texto, editado_en')
+    .single()
+  if (e) {
+    error.value = 'No se pudo guardar el cambio.'
+    return
+  }
+  c.texto = data.texto
+  c.editado_en = data.editado_en
+  editandoId.value = null
+}
+
 async function borrar(id: string) {
+  porBorrar.value = null
   const antes = [...comentarios.value]
   comentarios.value = antes.filter(c => c.id !== id)
   const { error: e } = await supabase.from('comentarios').delete().eq('id', id)
@@ -73,7 +112,7 @@ async function borrar(id: string) {
 
 <template>
   <div class="mt-3 border-t-2 border-dashed border-tinta/30 pt-3">
-    <div class="flex flex-wrap items-center gap-1.5">
+    <div v-if="!soloComentarios" class="flex flex-wrap items-center gap-1.5">
       <button
         v-for="e in EMOJIS"
         :key="e"
@@ -90,18 +129,45 @@ async function borrar(id: string) {
 
     <ul v-if="comentarios.length" class="mt-3 space-y-2">
       <li v-for="c in comentarios" :key="c.id" class="rounded-xl bg-garua px-3 py-2 text-sm">
-        <span class="font-bold">{{ c.autor?.nombre }}</span>
-        <span class="whitespace-pre-line"> {{ c.texto }}</span>
-        <button
-          v-if="c.autor_id === perfil?.id"
-          class="ml-2 text-xs font-bold underline"
-          :aria-label="`Borrar tu comentario: ${c.texto}`"
-          @click="borrar(c.id)"
-        >Borrar</button>
+        <form v-if="editandoId === c.id" class="flex gap-2" @submit.prevent="guardarEdicion(c)">
+          <input
+            v-model="textoEdicion"
+            type="text"
+            maxlength="500"
+            aria-label="Edita tu comentario"
+            class="min-w-0 flex-1 rounded-full border-2 border-tinta bg-papel px-3 py-1 text-sm outline-none"
+          >
+          <button class="rounded-full border-2 border-tinta bg-tinta px-3 text-xs font-bold text-papel" :disabled="!textoEdicion.trim()">
+            Guardar
+          </button>
+          <button type="button" class="text-xs font-bold underline" @click="editandoId = null">Cancelar</button>
+        </form>
+        <template v-else>
+          <span class="font-bold">{{ c.autor?.nombre }}</span>
+          <span class="whitespace-pre-line"> {{ c.texto }}</span>
+          <button
+            v-if="c.editado_en"
+            class="ml-1 text-xs italic"
+            :aria-expanded="verEdicion === c.id"
+            @click="verEdicion = verEdicion === c.id ? null : c.id"
+          >(editado)</button>
+          <span v-if="verEdicion === c.id && c.editado_en" class="block text-xs">Última edición: {{ fechaHora(c.editado_en) }}</span>
+          <span v-if="c.autor_id === perfil?.id" class="mt-1 flex gap-3 text-xs font-bold">
+            <template v-if="porBorrar === c.id">
+              <span>¿Borrar tu comentario?</span>
+              <button class="underline" @click="porBorrar = null">No</button>
+              <button class="rounded-full border-2 border-tinta bg-rocoto-suave px-2" @click="borrar(c.id)">Sí, borrar</button>
+            </template>
+            <template v-else>
+              <button v-if="!soloComentarios" class="underline" @click="empezarEdicion(c)">Editar</button>
+              <button class="underline" :aria-label="`Borrar tu comentario: ${c.texto}`" @click="porBorrar = c.id">Borrar</button>
+            </template>
+          </span>
+        </template>
       </li>
     </ul>
 
-    <form v-if="abierto" class="mt-2 flex gap-2" @submit.prevent="comentar">
+    <form v-if="abierto && !soloComentarios" class="mt-2 flex gap-2" @submit.prevent="comentar">
       <input
         v-model="texto"
         type="text"

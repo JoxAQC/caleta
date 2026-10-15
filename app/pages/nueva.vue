@@ -47,11 +47,23 @@ const fotos = ref<{ archivo: File, vista: string }[]>([])
 const guardando = ref(false)
 const error = ref('')
 
+// Modo edición (?editar=<id de reseña>): se abre en el paso 3 con la reseña precargada.
+const editando = ref<string | null>(null)
+const privadaAntes = ref(false)
+// Si otras personas comentaron, la reseña no puede pasar a privada.
+const comentariosAjenos = ref(false)
+const fotosActuales = ref<{ path: string, url: string }[]>([])
+const fotosQuitadas = ref<string[]>([])
+
 onMounted(async () => {
   try {
     await cargarCatalogo()
     const { data } = await supabase.from('lugares_resumen').select('*')
     lugaresGrupo.value = (data ?? []) as LugarResumen[]
+    if (typeof route.query.editar === 'string') {
+      await cargarParaEditar(route.query.editar)
+      return
+    }
     const id = route.query.lugar
     const previo = lugaresGrupo.value.find(l => l.id === id)
     if (previo) {
@@ -65,6 +77,48 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => fotos.value.forEach(f => URL.revokeObjectURL(f.vista)))
+
+async function cargarParaEditar(resenaId: string) {
+  const { data: r, error: e } = await supabase
+    .from('resenas')
+    .select('*, resena_tags(tag_id), fotos(path), comentarios(autor_id)')
+    .eq('id', resenaId)
+    .eq('autor_id', perfil.value?.id ?? '')
+    .is('borrada_en', null)
+    .maybeSingle()
+  const lugar = r && lugaresGrupo.value.find(l => l.id === r.lugar_id)
+  if (e || !r || !lugar) {
+    error.value = 'No se encontró la reseña para editar.'
+    return
+  }
+  editando.value = r.id
+  elegirExistente(lugar)
+  plan.value = r.plan as PlanId | null
+  general.value = r.general
+  generalManual.value = true
+  aspectos.comida = r.comida ?? 0
+  aspectos.ambiente = r.ambiente ?? 0
+  aspectos.servicio = r.servicio ?? 0
+  aspectos.calidad_precio = r.calidad_precio ?? 0
+  detallado.value = Object.values(aspectos).some(v => v > 0)
+  tagsElegidos.value = r.resena_tags.map(t => t.tag_id)
+  nota.value = r.nota ?? ''
+  privada.value = r.privada
+  privadaAntes.value = r.privada
+  comentariosAjenos.value = r.comentarios.some(c => c.autor_id !== r.autor_id)
+
+  const rutas = r.fotos.map(f => f.path)
+  if (rutas.length) {
+    const { data: firmadas } = await supabase.storage.from('fotos').createSignedUrls(rutas, 3600)
+    fotosActuales.value = (firmadas ?? []).filter(f => f.path && f.signedUrl).map(f => ({ path: f.path!, url: f.signedUrl! }))
+  }
+  paso.value = 3
+}
+
+function quitarFotoActual(path: string) {
+  fotosActuales.value = fotosActuales.value.filter(f => f.path !== path)
+  fotosQuitadas.value.push(path)
+}
 
 // --- Paso 1 ---
 const coincidenciasGrupo = computed(() => {
@@ -170,7 +224,7 @@ function alternarTag(id: string) {
 // --- Paso 4 ---
 function agregarFotos(e: Event) {
   const input = e.target as HTMLInputElement
-  const libres = MAX_FOTOS - fotos.value.length
+  const libres = MAX_FOTOS - fotos.value.length - fotosActuales.value.length
   for (const archivo of Array.from(input.files ?? []).slice(0, libres)) {
     fotos.value.push({ archivo, vista: URL.createObjectURL(archivo) })
   }
@@ -208,6 +262,7 @@ function siguiente() {
 }
 
 function atras() {
+  if (editando.value && paso.value === 3) return navigateTo(`/lugar/${existente.value?.id}`)
   if (paso.value === 1) return navigateTo('/')
   paso.value = paso.value === 3 && existente.value ? 1 : paso.value - 1
 }
@@ -277,8 +332,76 @@ async function guardarParaDespues(privado = false) {
   }
 }
 
+// Sube fotos nuevas de una reseña; devuelve cuántas fallaron (no bloquean el guardado).
+async function subirFotos(resenaId: string) {
+  let fallidas = 0
+  for (const f of fotos.value) {
+    try {
+      const blob = await comprimirImagen(f.archivo)
+      const path = `${perfil.value!.grupo_id}/${resenaId}/${crypto.randomUUID()}.jpg`
+      const { error: eSubida } = await supabase.storage.from('fotos').upload(path, blob, { contentType: 'image/jpeg' })
+      if (eSubida) throw eSubida
+      const { error: eFila } = await supabase.from('fotos').insert({ resena_id: resenaId, path })
+      if (eFila) throw eFila
+    }
+    catch {
+      fallidas++
+    }
+  }
+  return fallidas
+}
+
+async function actualizar(resenaId: string) {
+  const conAspectos = detallado.value
+  const { error: e } = await supabase
+    .from('resenas')
+    .update({
+      general: general.value,
+      comida: conAspectos && aspectos.comida ? aspectos.comida : null,
+      ambiente: conAspectos && aspectos.ambiente ? aspectos.ambiente : null,
+      servicio: conAspectos && aspectos.servicio ? aspectos.servicio : null,
+      calidad_precio: conAspectos && aspectos.calidad_precio ? aspectos.calidad_precio : null,
+      plan: plan.value,
+      nota: nota.value.trim() || null,
+      privada: privada.value,
+    })
+    .eq('id', resenaId)
+  if (e) throw e
+
+  // Tags: se reemplazan por los elegidos.
+  const { error: eBorrar } = await supabase.from('resena_tags').delete().eq('resena_id', resenaId)
+  if (eBorrar) throw eBorrar
+  if (tagsElegidos.value.length) {
+    const { error: eTags } = await supabase
+      .from('resena_tags')
+      .insert(tagsElegidos.value.map(tag_id => ({ resena_id: resenaId, tag_id })))
+    if (eTags) throw eTags
+  }
+
+  if (fotosQuitadas.value.length) {
+    await supabase.from('fotos').delete().in('path', fotosQuitadas.value)
+    await supabase.storage.from('fotos').remove(fotosQuitadas.value)
+  }
+  const fallidas = await subirFotos(resenaId)
+  await navigateTo({ path: `/lugar/${existente.value!.id}`, query: fallidas ? { fotosFallidas: String(fallidas) } : {} })
+}
+
 async function guardar() {
   if (!perfil.value || guardando.value) return
+  if (editando.value) {
+    guardando.value = true
+    error.value = ''
+    try {
+      await actualizar(editando.value)
+    }
+    catch (e) {
+      error.value = (e as { message?: string }).message?.includes('resena_con_comentarios')
+        ? 'Ya hay comentarios de otros: esta reseña no puede volverse privada.'
+        : 'No se pudieron guardar los cambios. Intenta de nuevo.'
+      guardando.value = false
+    }
+    return
+  }
   guardando.value = true
   error.value = ''
   try {
@@ -312,21 +435,8 @@ async function guardar() {
       if (e3) throw e3
     }
 
-    // Las fotos no bloquean la reseña: si alguna falla, se avisa en la ficha.
-    let fallidas = 0
-    for (const f of fotos.value) {
-      try {
-        const blob = await comprimirImagen(f.archivo)
-        const path = `${perfil.value.grupo_id}/${resena.id}/${crypto.randomUUID()}.jpg`
-        const { error: eSubida } = await supabase.storage.from('fotos').upload(path, blob, { contentType: 'image/jpeg' })
-        if (eSubida) throw eSubida
-        const { error: eFila } = await supabase.from('fotos').insert({ resena_id: resena.id, path })
-        if (eFila) throw eFila
-      }
-      catch {
-        fallidas++
-      }
-    }
+    // Las fotos no bloquean la reseña: si alguna falla, se avisa en el mapa.
+    const fallidas = await subirFotos(resena.id)
 
     // De vuelta al mapa, acercado al lugar recién reseñado.
     await navigateTo({ path: '/', query: { lugar: lugarId, ...(fallidas ? { fotosFallidas: String(fallidas) } : {}) } })
@@ -356,7 +466,7 @@ async function guardar() {
         {{ categoria(categoriaId)?.emoji }} {{ nombre }}
       </p>
       <h1 class="font-display text-3xl leading-tight font-extrabold" :class="paso === 1 ? 'mt-4' : 'mt-0.5'">
-        {{ titulos[paso - 1] }}
+        {{ editando && paso === 3 ? 'Edita tu reseña' : titulos[paso - 1] }}
       </h1>
     </header>
 
@@ -507,6 +617,14 @@ async function guardar() {
       <!-- Paso 4: fotos y nota -->
       <section v-else>
         <div class="grid grid-cols-4 gap-2">
+          <div v-for="(f, i) in fotosActuales" :key="f.path" class="relative aspect-square">
+            <img :src="f.url" alt="" class="size-full rounded-xl border-2 border-tinta object-cover">
+            <button
+              class="absolute -top-2 -right-2 grid size-6 place-items-center rounded-full border-2 border-tinta bg-papel text-sm leading-none font-bold"
+              :aria-label="`Quitar foto guardada ${i + 1}`"
+              @click="quitarFotoActual(f.path)"
+            >×</button>
+          </div>
           <div v-for="(f, i) in fotos" :key="f.vista" class="relative aspect-square">
             <img :src="f.vista" alt="" class="size-full rounded-xl border-2 border-tinta object-cover">
             <button
@@ -516,7 +634,7 @@ async function guardar() {
             >×</button>
           </div>
           <label
-            v-if="fotos.length < MAX_FOTOS"
+            v-if="fotos.length + fotosActuales.length < MAX_FOTOS"
             class="grid aspect-square cursor-pointer place-items-center rounded-xl border-2 border-dashed border-tinta bg-papel/60 text-center text-xs font-bold"
           >
             <span><span class="block text-2xl leading-none">📷</span>Agregar</span>
@@ -526,10 +644,13 @@ async function guardar() {
         <p class="mt-2 text-sm">Hasta {{ MAX_FOTOS }} fotos. Se achican antes de subir.</p>
 
         <label class="sticker mt-4 flex cursor-pointer items-center gap-3 p-3">
-          <input v-model="privada" type="checkbox" class="size-5 accent-chicha">
+          <input v-model="privada" type="checkbox" class="size-5 accent-chicha" :disabled="comentariosAjenos && !privadaAntes">
           <span class="leading-tight">
             <span class="block font-bold">🔒 Solo para mí</span>
-            <span class="block text-sm">Nadie más de la mancha verá esta reseña.</span>
+            <span v-if="comentariosAjenos && !privadaAntes" class="block text-sm">
+              Ya hay comentarios de la mancha: no puede volverse privada.
+            </span>
+            <span v-else class="block text-sm">Nadie más de la mancha verá esta reseña.</span>
           </span>
         </label>
 
@@ -572,7 +693,7 @@ async function guardar() {
         🔒 Guardarlo solo para mí
       </button>
       <button v-if="paso === 4" class="btn w-full bg-tinta text-lg text-papel shadow-[3px_3px_0_var(--color-papel)]" :disabled="guardando" @click="guardar">
-        {{ guardando ? 'Guardando…' : 'Guardar reseña' }}
+        {{ guardando ? 'Guardando…' : editando ? 'Guardar cambios' : 'Guardar reseña' }}
       </button>
     </footer>
   </main>

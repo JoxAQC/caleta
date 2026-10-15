@@ -37,6 +37,11 @@ export function etiquetaPrecio(precio?: number | null) {
   return PRECIOS.find(p => p.valor === precio)?.etiqueta ?? ''
 }
 
+// "14 oct, 10:32", para mostrar cuándo se editó algo.
+export function fechaHora(iso: string) {
+  return new Date(iso).toLocaleString('es-PE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
 export const LIMA = { lat: -12.1, lng: -77.03 }
 
 export const estiloMapa = (noche: boolean) =>

@@ -59,6 +59,9 @@ export interface Resena {
   privada: boolean
   visitado_en: string
   creado_en: string
+  editado_en: string | null
+  // Borrada por su autor, pero con comentarios ajenos que se conservan.
+  borrada_en: string | null
   autor: Pick<Perfil, 'nombre' | 'avatar_url'> | null
   resena_tags: { tag_id: string }[]
   fotos: { path: string }[]
@@ -75,6 +78,7 @@ export interface Comentario {
   id: string
   texto: string
   creado_en: string
+  editado_en: string | null
   autor_id: string
   autor: Pick<Perfil, 'nombre'> | null
 }

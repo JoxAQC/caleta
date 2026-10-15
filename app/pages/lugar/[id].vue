@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { LugarResumen, Pendiente, Perfil, Resena } from '~/utils/tipos'
-import { ASPECTOS, emojiDePlan, etiquetaPrecio, NOTAS, PLANES } from '~/utils/catalogo'
+import { ASPECTOS, emojiDePlan, etiquetaPrecio, fechaHora, NOTAS, PLANES } from '~/utils/catalogo'
 
 const route = useRoute()
 const supabase = useSupabaseClient()
@@ -25,7 +25,7 @@ async function cargar() {
       supabase.from('lugares_resumen').select('*').eq('id', id).maybeSingle(),
       supabase
         .from('resenas')
-        .select('*, autor:perfiles!resenas_autor_id_fkey(nombre, avatar_url), resena_tags(tag_id), fotos(path), reacciones(emoji, usuario_id), comentarios(id, texto, creado_en, autor_id, autor:perfiles!comentarios_autor_id_fkey(nombre))')
+        .select('*, autor:perfiles!resenas_autor_id_fkey(nombre, avatar_url), resena_tags(tag_id), fotos(path), reacciones(emoji, usuario_id), comentarios(id, texto, creado_en, editado_en, autor_id, autor:perfiles!comentarios_autor_id_fkey(nombre))')
         .eq('lugar_id', id)
         .order('creado_en', { ascending: false }),
       supabase.from('pendientes').select('usuario_id, recomendado_por, privado').eq('lugar_id', id),
@@ -52,6 +52,8 @@ async function cargar() {
         if (d.path && d.signedUrl) urls.value[d.path] = d.signedUrl
       }
     }
+    const { data: borrable } = await supabase.rpc('puedo_borrar_lugar', { p_lugar: id })
+    puedoBorrarLugar.value = !!borrable
     estado.value = 'listo'
   }
   catch {
@@ -76,18 +78,40 @@ async function borrarResena(r: Resena) {
   if (borrando.value) return
   borrando.value = true
   aviso.value = ''
-  // Primero los archivos: al borrar la reseña se pierden las rutas.
-  const rutas = r.fotos.map(f => f.path)
-  if (rutas.length) await supabase.storage.from('fotos').remove(rutas)
-  const { error } = await supabase.from('resenas').delete().eq('id', r.id)
+  // Si otras personas comentaron, la base la deja como "borrada" y conserva esos comentarios.
+  const { data: rutas, error } = await supabase.rpc('borrar_resena', { p_resena: r.id })
   borrando.value = false
   porBorrar.value = null
   if (error) {
     aviso.value = 'No se pudo borrar la reseña.'
     return
   }
+  if (rutas?.length) await supabase.storage.from('fotos').remove(rutas)
   await cargar()
 }
+
+// --- Borrar el lugar: solo quien lo creó y si nadie más aportó ---
+const puedoBorrarLugar = ref(false)
+const confirmarBorrarLugar = ref(false)
+
+async function borrarLugar() {
+  if (!lugar.value || borrando.value) return
+  borrando.value = true
+  aviso.value = ''
+  const { data: rutas, error } = await supabase.rpc('borrar_lugar', { p_lugar: lugar.value.id })
+  borrando.value = false
+  if (error) {
+    confirmarBorrarLugar.value = false
+    puedoBorrarLugar.value = false
+    aviso.value = 'Otras personas ya aportaron en este lugar: solo puedes borrar lo tuyo.'
+    return
+  }
+  if (rutas?.length) await supabase.storage.from('fotos').remove(rutas)
+  await navigateTo('/')
+}
+
+// Reseña cuya fecha de edición se está mostrando.
+const verEdicion = ref<string | null>(null)
 
 // --- Quiero ir ---
 const nombreDe = (id: string | null) => mancha.value.find(x => x.id === id)?.nombre
@@ -206,6 +230,20 @@ async function recomendar(amigoId: string) {
         </div>
       </header>
 
+      <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm font-bold">
+        <NuxtLink :to="`/corregir/${lugar.id}`" class="underline">✏️ Corregir datos del lugar</NuxtLink>
+        <template v-if="puedoBorrarLugar">
+          <span v-if="confirmarBorrarLugar" class="flex items-center gap-2">
+            <span>¿Borrar el lugar con todo lo tuyo?</span>
+            <button class="underline" @click="confirmarBorrarLugar = false">No</button>
+            <button class="rounded-full border-2 border-tinta bg-rocoto-suave px-2" :disabled="borrando" @click="borrarLugar">
+              {{ borrando ? 'Borrando…' : 'Sí, borrar' }}
+            </button>
+          </span>
+          <button v-else class="underline" @click="confirmarBorrarLugar = true">🗑️ Borrar lugar</button>
+        </template>
+      </div>
+
       <section class="mt-4">
         <div class="flex gap-2">
           <button
@@ -262,19 +300,37 @@ async function recomendar(amigoId: string) {
           </span>
           <div class="min-w-0 flex-1 leading-tight">
             <p class="font-bold">{{ r.autor?.nombre }}</p>
-            <p class="text-xs">{{ fecha(r.visitado_en) }}<template v-if="r.plan"> · {{ nombrePlan(r.plan) }}</template></p>
+            <p v-if="r.borrada_en" class="text-xs">Borró su reseña</p>
+            <p v-else class="text-xs">
+              {{ fecha(r.visitado_en) }}<template v-if="r.plan"> · {{ nombrePlan(r.plan) }}</template>
+              <button
+                v-if="r.editado_en"
+                class="italic"
+                :aria-expanded="verEdicion === r.id"
+                @click="verEdicion = verEdicion === r.id ? null : r.id"
+              >(editado)</button>
+            </p>
+            <p v-if="verEdicion === r.id && r.editado_en" class="text-xs">Última edición: {{ fechaHora(r.editado_en) }}</p>
           </div>
-          <template v-if="r.autor_id === perfil?.id">
+          <template v-if="r.autor_id === perfil?.id && !r.borrada_en">
             <span v-if="porBorrar === r.id" class="flex items-center gap-2 text-xs font-bold">
               <button class="underline" @click="porBorrar = null">Cancelar</button>
-              <button class="rounded-full border-2 border-tinta bg-rocoto px-2 py-0.5 text-white" :disabled="borrando" @click="borrarResena(r)">
+              <button class="rounded-full border-2 border-tinta bg-rocoto-suave px-2 py-0.5" :disabled="borrando" @click="borrarResena(r)">
                 {{ borrando ? 'Borrando…' : 'Sí, borrar' }}
               </button>
             </span>
-            <button v-else class="text-xs font-bold underline" @click="porBorrar = r.id">Borrar</button>
+            <span v-else class="flex gap-3 text-xs font-bold">
+              <NuxtLink :to="`/nueva?editar=${r.id}`" class="underline">Editar</NuxtLink>
+              <button class="underline" @click="porBorrar = r.id">Borrar</button>
+            </span>
           </template>
         </div>
 
+        <p v-if="r.borrada_en" class="mt-3 text-sm italic">
+          {{ r.autor?.nombre }} borró su reseña. Se conservan los comentarios de la mancha.
+        </p>
+
+        <template v-else>
         <div class="mt-3 flex items-center gap-2">
           <Puntaje :model-value="r.general" :plan="r.plan" solo-lectura />
           <span v-if="r.privada" class="ml-auto rounded-full border-2 border-tinta bg-chicha px-2 py-0.5 text-xs font-bold">🔒 Solo tú</span>
@@ -311,7 +367,9 @@ async function recomendar(amigoId: string) {
           </a>
         </div>
 
-        <ResenaSocial :resena-id="r.id" :reacciones="r.reacciones" :comentarios="r.comentarios" />
+        </template>
+
+        <ResenaSocial :resena-id="r.id" :reacciones="r.reacciones" :comentarios="r.comentarios" :solo-comentarios="!!r.borrada_en" />
       </article>
 
       <div class="fixed inset-x-0 bottom-0 flex justify-center p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">

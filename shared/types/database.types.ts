@@ -39,14 +39,14 @@ export type Database = {
                   ]
                 },"comentarios": {
                   Row: {
-                    "autor_id": string,"creado_en": string,"id": string,"resena_id": string,"texto": string
+                    "autor_id": string,"creado_en": string,"editado_en": string | null,"id": string,"resena_id": string,"texto": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "autor_id": string,"creado_en"?: string,"id"?: string,"resena_id": string,"texto": string
+                    "autor_id": string,"creado_en"?: string,"editado_en"?: string | null,"id"?: string,"resena_id": string,"texto": string
                   }
                   Update: {
-                    "autor_id"?: string,"creado_en"?: string,"id"?: string,"resena_id"?: string,"texto"?: string
+                    "autor_id"?: string,"creado_en"?: string,"editado_en"?: string | null,"id"?: string,"resena_id"?: string,"texto"?: string
                   }
                   Relationships: [
                     {
@@ -287,14 +287,14 @@ isOneToOne: false
                   ]
                 },"resenas": {
                   Row: {
-                    "ambiente": number | null,"autor_id": string,"calidad_precio": number | null,"comida": number | null,"creado_en": string,"general": number,"grupo_id": string,"id": string,"lugar_id": string,"nota": string | null,"plan": string | null,"privada": boolean,"servicio": number | null,"visitado_en": string
+                    "ambiente": number | null,"autor_id": string,"borrada_en": string | null,"calidad_precio": number | null,"comida": number | null,"creado_en": string,"editado_en": string | null,"general": number,"grupo_id": string,"id": string,"lugar_id": string,"nota": string | null,"plan": string | null,"privada": boolean,"servicio": number | null,"visitado_en": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "ambiente"?: number | null,"autor_id": string,"calidad_precio"?: number | null,"comida"?: number | null,"creado_en"?: string,"general": number,"grupo_id": string,"id"?: string,"lugar_id": string,"nota"?: string | null,"plan"?: string | null,"privada"?: boolean,"servicio"?: number | null,"visitado_en"?: string
+                    "ambiente"?: number | null,"autor_id": string,"borrada_en"?: string | null,"calidad_precio"?: number | null,"comida"?: number | null,"creado_en"?: string,"editado_en"?: string | null,"general": number,"grupo_id": string,"id"?: string,"lugar_id": string,"nota"?: string | null,"plan"?: string | null,"privada"?: boolean,"servicio"?: number | null,"visitado_en"?: string
                   }
                   Update: {
-                    "ambiente"?: number | null,"autor_id"?: string,"calidad_precio"?: number | null,"comida"?: number | null,"creado_en"?: string,"general"?: number,"grupo_id"?: string,"id"?: string,"lugar_id"?: string,"nota"?: string | null,"plan"?: string | null,"privada"?: boolean,"servicio"?: number | null,"visitado_en"?: string
+                    "ambiente"?: number | null,"autor_id"?: string,"borrada_en"?: string | null,"calidad_precio"?: number | null,"comida"?: number | null,"creado_en"?: string,"editado_en"?: string | null,"general"?: number,"grupo_id"?: string,"id"?: string,"lugar_id"?: string,"nota"?: string | null,"plan"?: string | null,"privada"?: boolean,"servicio"?: number | null,"visitado_en"?: string
                   }
                   Relationships: [
                     {
@@ -369,7 +369,13 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "lugar_en_mi_grupo":
+            "borrar_lugar":
+{ Args: { "p_lugar": string }; Returns: (string)[]
+                           },
+"borrar_resena":
+{ Args: { "p_resena": string }; Returns: (string)[]
+                           },
+"lugar_en_mi_grupo":
 { Args: { "p_lugar": string }; Returns: boolean
                            },
 "lugar_por_referencia":
@@ -380,6 +386,9 @@ isOneToOne: false
                            },
 "mi_grupo":
 { Args: Record<PropertyKey, never>; Returns: string
+                           },
+"puedo_borrar_lugar":
+{ Args: { "p_lugar": string }; Returns: boolean
                            },
 "reclamar_invitacion":
 { Args: { "p_codigo"?: string }; Returns: {

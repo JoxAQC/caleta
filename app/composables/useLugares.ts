@@ -18,7 +18,7 @@ export function useLugares() {
   async function cargar() {
     const [l, r, p, q] = await Promise.all([
       supabase.from('lugares_resumen').select('*'),
-      supabase.from('resenas').select('lugar_id, autor_id, plan, resena_tags(tag_id)'),
+      supabase.from('resenas').select('lugar_id, autor_id, plan, resena_tags(tag_id)').is('borrada_en', null),
       supabase.from('perfiles').select('id, nombre').order('nombre'),
       supabase.from('pendientes').select('lugar_id').eq('usuario_id', perfil.value?.id ?? ''),
     ])
