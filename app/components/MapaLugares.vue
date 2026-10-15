@@ -2,6 +2,7 @@
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { Map as MapaGL, Marker } from 'maplibre-gl'
 import type { LugarRico } from '~/composables/useLugares'
+import type { Coordenada } from '~/utils/tipos'
 import { estiloMapa, LIMA } from '~/utils/catalogo'
 
 // enfocar: id del lugar en el que debe abrir el mapa (por ejemplo, el recién reseñado).
@@ -28,6 +29,27 @@ function enfocarLugar() {
   mapa.jumpTo({ center: [l.lng, l.lat], zoom: ZOOM_CERCA + 1 })
 }
 
+// Ubicación para abrir el mapa ya centrado, sin pasar antes por Lima.
+// Acepta una posición reciente del teléfono (hasta 10 min) y no espera más de 3 s:
+// si no llega a tiempo o no hay permiso, el mapa abre en Lima.
+function ubicacionInicial(): Promise<Coordenada | null> {
+  if (!navigator.geolocation) return Promise.resolve(null)
+  return new Promise((resolver) => {
+    const limite = setTimeout(() => resolver(null), 3000)
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        clearTimeout(limite)
+        resolver({ lat: p.coords.latitude, lng: p.coords.longitude })
+      },
+      () => {
+        clearTimeout(limite)
+        resolver(null)
+      },
+      { maximumAge: 10 * 60 * 1000, timeout: 3000 },
+    )
+  })
+}
+
 function pintar() {
   if (!mapa || !gl) return
   marcadores.forEach(m => m.remove())
@@ -50,23 +72,28 @@ function pintar() {
 }
 
 onMounted(async () => {
-  gl = await import('maplibre-gl')
+  const [modulo, aqui] = await Promise.all([
+    import('maplibre-gl'),
+    props.enfocar ? Promise.resolve(null) : ubicacionInicial(),
+  ])
+  gl = modulo
   mapa = new gl.Map({
     container: contenedor.value!,
     style: estiloMapa(esNoche.value),
-    center: [LIMA.lng, LIMA.lat],
-    zoom: 12,
+    center: aqui ? [aqui.lng, aqui.lat] : [LIMA.lng, LIMA.lat],
+    zoom: aqui ? ZOOM_CERCA : 12,
     attributionControl: { compact: true },
   })
   const ubicacion = new gl.GeolocateControl({
     positionOptions: { enableHighAccuracy: true },
     trackUserLocation: true,
-    fitBoundsOptions: { maxZoom: ZOOM_CERCA },
+    // Sin animación: si la posición llega tarde, el mapa salta en vez de deslizarse.
+    fitBoundsOptions: { maxZoom: ZOOM_CERCA, duration: 0 },
   })
   mapa.addControl(ubicacion, 'bottom-right')
   mapa.on('click', () => emit('seleccionar', null))
   mapa.on('load', () => {
-    // Al abrir, acerca a donde está la persona; si no da permiso, se queda en la vista de Lima.
+    // El punto azul de la ubicación; la cámara ya abrió centrada si había posición.
     if (props.enfocar) enfocarLugar()
     else ubicacion.trigger()
   })

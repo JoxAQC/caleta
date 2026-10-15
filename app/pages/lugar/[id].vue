@@ -208,12 +208,33 @@ async function recomendar(amigoId: string) {
         La reseña se guardó, pero {{ route.query.fotosFallidas }} foto(s) no se pudieron subir.
       </p>
       <header class="sticker mt-4 p-4" :style="{ background: cat?.color }">
-        <p class="text-sm font-bold">
-          {{ cat?.emoji }} {{ cat?.nombre }}
-          <template v-if="lugar.precio"> · {{ etiquetaPrecio(lugar.precio) }}</template>
-        </p>
+        <div class="flex items-start gap-2">
+          <p class="flex-1 text-sm font-bold">
+            {{ cat?.emoji }} {{ cat?.nombre }}
+            <template v-if="lugar.precio"> · {{ etiquetaPrecio(lugar.precio) }}</template>
+          </p>
+          <NuxtLink :to="`/corregir/${lugar.id}`" class="size-9 shrink-0 grid place-items-center rounded-full border-2 border-tinta bg-papel" aria-label="Corregir datos del lugar">
+            <Icono nombre="lapiz" />
+          </NuxtLink>
+          <button
+            v-if="puedoBorrarLugar"
+            class="size-9 shrink-0 grid place-items-center rounded-full border-2 border-tinta bg-papel"
+            aria-label="Borrar lugar"
+            :aria-expanded="confirmarBorrarLugar"
+            @click="confirmarBorrarLugar = !confirmarBorrarLugar"
+          >
+            <Icono nombre="tacho" />
+          </button>
+        </div>
         <h1 class="mt-1 font-display text-3xl leading-none font-extrabold">{{ lugar.nombre }}</h1>
         <p v-if="lugar.direccion" class="mt-1 text-sm">{{ lugar.direccion }}</p>
+        <div v-if="confirmarBorrarLugar" class="mt-3 flex flex-wrap items-center gap-2 rounded-xl border-2 border-tinta bg-papel p-2 text-sm font-bold">
+          <span class="flex-1">¿Borrar el lugar con todo lo tuyo?</span>
+          <button class="underline" @click="confirmarBorrarLugar = false">No</button>
+          <button class="rounded-full border-2 border-tinta bg-rocoto-suave px-3 py-0.5" :disabled="borrando" @click="borrarLugar">
+            {{ borrando ? 'Borrando…' : 'Sí, borrar' }}
+          </button>
+        </div>
         <div class="mt-3 flex items-center gap-3">
           <span v-if="lugar.promedio" class="rounded-full border-2 border-tinta bg-papel px-3 py-0.5 font-display text-xl font-bold">
             {{ lugar.promedio.toFixed(1) }}
@@ -229,20 +250,6 @@ async function recomendar(amigoId: string) {
           >Cómo llegar</a>
         </div>
       </header>
-
-      <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm font-bold">
-        <NuxtLink :to="`/corregir/${lugar.id}`" class="underline">✏️ Corregir datos del lugar</NuxtLink>
-        <template v-if="puedoBorrarLugar">
-          <span v-if="confirmarBorrarLugar" class="flex items-center gap-2">
-            <span>¿Borrar el lugar con todo lo tuyo?</span>
-            <button class="underline" @click="confirmarBorrarLugar = false">No</button>
-            <button class="rounded-full border-2 border-tinta bg-rocoto-suave px-2" :disabled="borrando" @click="borrarLugar">
-              {{ borrando ? 'Borrando…' : 'Sí, borrar' }}
-            </button>
-          </span>
-          <button v-else class="underline" @click="confirmarBorrarLugar = true">🗑️ Borrar lugar</button>
-        </template>
-      </div>
 
       <section class="mt-4">
         <div class="flex gap-2">
@@ -319,9 +326,13 @@ async function recomendar(amigoId: string) {
                 {{ borrando ? 'Borrando…' : 'Sí, borrar' }}
               </button>
             </span>
-            <span v-else class="flex gap-3 text-xs font-bold">
-              <NuxtLink :to="`/nueva?editar=${r.id}`" class="underline">Editar</NuxtLink>
-              <button class="underline" @click="porBorrar = r.id">Borrar</button>
+            <span v-else class="flex gap-2">
+              <NuxtLink :to="`/nueva?editar=${r.id}`" class="size-8 grid place-items-center rounded-full border-2 border-tinta bg-papel" aria-label="Editar tu reseña">
+                <Icono nombre="lapiz" :size="16" />
+              </NuxtLink>
+              <button class="size-8 grid place-items-center rounded-full border-2 border-tinta bg-papel" aria-label="Borrar tu reseña" @click="porBorrar = r.id">
+                <Icono nombre="tacho" :size="16" />
+              </button>
             </span>
           </template>
         </div>

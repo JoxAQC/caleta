@@ -152,15 +152,19 @@ async function borrar(id: string) {
             @click="verEdicion = verEdicion === c.id ? null : c.id"
           >(editado)</button>
           <span v-if="verEdicion === c.id && c.editado_en" class="block text-xs">Última edición: {{ fechaHora(c.editado_en) }}</span>
-          <span v-if="c.autor_id === perfil?.id" class="mt-1 flex gap-3 text-xs font-bold">
+          <span v-if="c.autor_id === perfil?.id" class="mt-1.5 flex items-center gap-2 text-xs font-bold">
             <template v-if="porBorrar === c.id">
               <span>¿Borrar tu comentario?</span>
               <button class="underline" @click="porBorrar = null">No</button>
               <button class="rounded-full border-2 border-tinta bg-rocoto-suave px-2" @click="borrar(c.id)">Sí, borrar</button>
             </template>
             <template v-else>
-              <button v-if="!soloComentarios" class="underline" @click="empezarEdicion(c)">Editar</button>
-              <button class="underline" :aria-label="`Borrar tu comentario: ${c.texto}`" @click="porBorrar = c.id">Borrar</button>
+              <button v-if="!soloComentarios" class="size-7 grid place-items-center rounded-full border-2 border-tinta bg-papel" aria-label="Editar tu comentario" @click="empezarEdicion(c)">
+                <Icono nombre="lapiz" :size="14" />
+              </button>
+              <button class="size-7 grid place-items-center rounded-full border-2 border-tinta bg-papel" :aria-label="`Borrar tu comentario: ${c.texto}`" @click="porBorrar = c.id">
+                <Icono nombre="tacho" :size="14" />
+              </button>
             </template>
           </span>
         </template>
