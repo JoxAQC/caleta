@@ -5,6 +5,8 @@ export interface LugarRico extends LugarResumen {
   tags: string[]
   planes: PlanId[]
   autores: string[]
+  // Platos que la mancha pidió ahí, para encontrar el lugar buscando "anticuchos".
+  platos: string[]
   // Está en la lista "Quiero ir" del usuario en sesión.
   pendiente: boolean
 }
@@ -18,7 +20,7 @@ export function useLugares() {
   async function cargar() {
     const [l, r, p, q] = await Promise.all([
       supabase.from('lugares_resumen').select('*'),
-      supabase.from('resenas').select('lugar_id, autor_id, plan, resena_tags(tag_id)').is('borrada_en', null),
+      supabase.from('resenas').select('lugar_id, autor_id, plan, platos, resena_tags(tag_id)').is('borrada_en', null),
       supabase.from('perfiles').select('id, nombre').order('nombre'),
       supabase.from('pendientes').select('lugar_id').eq('usuario_id', perfil.value?.id ?? ''),
     ])
@@ -28,18 +30,19 @@ export function useLugares() {
     if (q.error) throw q.error
     const mios = new Set(q.data.map(x => x.lugar_id))
 
-    const porLugar = new Map<string, { tags: Set<string>, planes: Set<PlanId>, autores: Set<string> }>()
+    const porLugar = new Map<string, { tags: Set<string>, planes: Set<PlanId>, autores: Set<string>, platos: Set<string> }>()
     for (const res of r.data) {
       let x = porLugar.get(res.lugar_id)
-      if (!x) porLugar.set(res.lugar_id, x = { tags: new Set(), planes: new Set(), autores: new Set() })
+      if (!x) porLugar.set(res.lugar_id, x = { tags: new Set(), planes: new Set(), autores: new Set(), platos: new Set() })
       x.autores.add(res.autor_id)
       if (res.plan) x.planes.add(res.plan as PlanId)
       res.resena_tags.forEach(t => x!.tags.add(t.tag_id))
+      res.platos.forEach(p => x!.platos.add(p))
     }
 
     lugares.value = (l.data as unknown as LugarResumen[]).map((lugar) => {
       const x = porLugar.get(lugar.id)
-      return { ...lugar, tags: [...(x?.tags ?? [])], planes: [...(x?.planes ?? [])], autores: [...(x?.autores ?? [])], pendiente: mios.has(lugar.id) }
+      return { ...lugar, tags: [...(x?.tags ?? [])], planes: [...(x?.planes ?? [])], autores: [...(x?.autores ?? [])], platos: [...(x?.platos ?? [])], pendiente: mios.has(lugar.id) }
     })
     mancha.value = p.data
   }

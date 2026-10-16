@@ -1,4 +1,4 @@
-import type { PlanId } from './tipos'
+import type { GrupoCategoria, PlanId } from './tipos'
 
 // El plan de la visita define el ícono con el que se califica.
 export const PLANES: { id: PlanId, nombre: string, emoji: string }[] = [
@@ -10,6 +10,50 @@ export const PLANES: { id: PlanId, nombre: string, emoji: string }[] = [
 ]
 
 export const EMOJI_SIN_PLAN = '🍋'
+
+// Grupos para mostrar las categorías ordenadas. De noche, "Para salir" va primero.
+export const GRUPOS_CATEGORIA: { id: GrupoCategoria, nombre: string }[] = [
+  { id: 'peruana', nombre: 'Peruana' },
+  { id: 'rapido', nombre: 'Al paso y rápido' },
+  { id: 'dulce', nombre: 'Dulce y bebidas' },
+  { id: 'salir', nombre: 'Para salir' },
+  { id: 'otros', nombre: 'Otros' },
+]
+
+export const MAX_PLATOS = 8
+
+// Platos sugeridos en "¿Qué pediste?", según la categoría del lugar.
+// Son solo atajos: también se puede escribir cualquier otro.
+const PLATOS_POR_CATEGORIA: Record<string, string[]> = {
+  'cevicheria': ['Ceviche', 'Leche de tigre', 'Tiradito', 'Chicharrón de pescado', 'Jalea', 'Arroz con mariscos', 'Causa'],
+  'criollo': ['Lomo saltado', 'Ají de gallina', 'Seco con frejoles', 'Arroz con pato', 'Tacu tacu', 'Carapulcra', 'Cau cau'],
+  'anticucheria': ['Anticucho', 'Rachi', 'Pancita', 'Choncholí', 'Picarones'],
+  'menu': ['Menú', 'Sopa', 'Segundo', 'Refresco'],
+  'desayuno': ['Pan con chicharrón', 'Tamal', 'Humita', 'Café pasado'],
+  'regional': ['Juane', 'Tacacho con cecina', 'Chupe de camarones', 'Cabrito', 'Rocoto relleno', 'Adobo'],
+  'polleria': ['Pollo a la brasa', 'Mollejitas', 'Papas fritas'],
+  'chifa': ['Arroz chaufa', 'Tallarín saltado', 'Wantán frito', 'Aeropuerto', 'Chancho al ajo'],
+  'nikkei': ['Makis', 'Tiradito nikkei', 'Gyozas', 'Ramen'],
+  'parrilla': ['Bife', 'Chorizo', 'Costillas', 'Anticucho'],
+  'sanguche': ['Pan con chicharrón', 'Butifarra', 'Triple', 'Lechón', 'Pavo'],
+  'al-paso': ['Picarones', 'Choclo con queso', 'Emoliente', 'Papa rellena', 'Salchipapa'],
+  'hamburguesas': ['Hamburguesa', 'Salchipapa', 'Alitas', 'Broaster'],
+  'pizzeria': ['Pizza', 'Lasaña', 'Calzone'],
+  'jugueria': ['Jugo surtido', 'Especial', 'Jugo de papaya', 'Fresa con leche'],
+  'cafe': ['Café', 'Sánguche', 'Torta'],
+  'postres': ['Suspiro limeño', 'Picarones', 'Alfajores', 'Helado', 'Tres leches', 'Mazamorra morada'],
+  'amanecida': ['Caldo de gallina', 'Salchipapa', 'Pan con chicharrón'],
+  'bar': ['Pisco sour', 'Chilcano', 'Cerveza', 'Maracuyá sour'],
+}
+
+const PLATOS_COMUNES = ['Ceviche', 'Lomo saltado', 'Anticucho', 'Pollo a la brasa', 'Arroz chaufa', 'Pisco sour']
+
+export function platosSugeridos(categoriaId?: string | null) {
+  return PLATOS_POR_CATEGORIA[categoriaId ?? ''] ?? PLATOS_COMUNES
+}
+
+// Todos los platos conocidos, para autocompletar al escribir.
+export const TODOS_LOS_PLATOS = [...new Set(Object.values(PLATOS_POR_CATEGORIA).flat())].sort((a, b) => a.localeCompare(b))
 
 export function emojiDePlan(plan?: PlanId | null) {
   return PLANES.find(p => p.id === plan)?.emoji ?? EMOJI_SIN_PLAN

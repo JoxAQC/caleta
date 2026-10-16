@@ -12,6 +12,9 @@ export interface Filtros {
   soloPendientes: boolean
 }
 
+// "anticucho" encuentra "Anticuchos"; sin tildes ni mayúsculas.
+const simple = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
 const VACIO: Filtros = { texto: '', categorias: [], tags: [], plan: null, precioMax: null, minimo: 0, autor: null, soloPendientes: false }
 
 export function useFiltros() {
@@ -25,8 +28,8 @@ export function useFiltros() {
 
   function pasa(l: LugarRico) {
     const f = filtros.value
-    const q = f.texto.trim().toLowerCase()
-    if (q && !l.nombre.toLowerCase().includes(q)) return false
+    const q = simple(f.texto.trim())
+    if (q && !simple(l.nombre).includes(q) && !l.platos.some(p => simple(p).includes(q))) return false
     if (f.categorias.length && !f.categorias.includes(l.categoria_id)) return false
     if (!f.tags.every(t => l.tags.includes(t))) return false
     if (f.plan && !l.planes.includes(f.plan)) return false

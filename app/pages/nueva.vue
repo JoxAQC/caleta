@@ -11,7 +11,7 @@ const MAX_FOTOS = 4
 const route = useRoute()
 const supabase = useSupabaseClient()
 const { perfil } = usePerfil()
-const { categorias, tags, categoria, enModo, cargar: cargarCatalogo } = useCatalogo()
+const { tags, categoria, cargar: cargarCatalogo } = useCatalogo()
 const { esNoche } = useModo()
 
 const paso = ref(1)
@@ -41,6 +41,7 @@ const tagsElegidos = ref<string[]>([])
 
 // Paso 4: fotos y nota
 const nota = ref('')
+const platos = ref<string[]>([])
 const privada = ref(false)
 const fotos = ref<{ archivo: File, vista: string }[]>([])
 
@@ -103,6 +104,7 @@ async function cargarParaEditar(resenaId: string) {
   detallado.value = Object.values(aspectos).some(v => v > 0)
   tagsElegidos.value = r.resena_tags.map(t => t.tag_id)
   nota.value = r.nota ?? ''
+  platos.value = r.platos ?? []
   privada.value = r.privada
   privadaAntes.value = r.privada
   comentariosAjenos.value = r.comentarios.some(c => c.autor_id !== r.autor_id)
@@ -190,12 +192,6 @@ function soltarExistente() {
 }
 
 // --- Paso 2 ---
-// Se ofrecen primero las categorías del modo actual; el resto queda a un toque.
-const todasLasCategorias = ref(false)
-const categoriasOfrecidas = computed(() =>
-  categorias.value.filter(c => todasLasCategorias.value || enModo(c.id) || c.id === categoriaId.value),
-)
-
 // Los tags de noche aparecen si el lugar es de noche, o en modo noche si sirve para ambos.
 const tagsOfrecidos = computed(() => {
   const ambito = categoria(categoriaId.value)?.ambito
@@ -363,6 +359,7 @@ async function actualizar(resenaId: string) {
       calidad_precio: conAspectos && aspectos.calidad_precio ? aspectos.calidad_precio : null,
       plan: plan.value,
       nota: nota.value.trim() || null,
+      platos: platos.value,
       privada: privada.value,
     })
     .eq('id', resenaId)
@@ -421,6 +418,7 @@ async function guardar() {
         calidad_precio: conAspectos && aspectos.calidad_precio ? aspectos.calidad_precio : null,
         plan: plan.value,
         nota: nota.value.trim() || null,
+        platos: platos.value,
         privada: privada.value,
         visitado_en: hoyLocal(),
       })
@@ -530,23 +528,7 @@ async function guardar() {
 
       <!-- Paso 2: categoría y precio -->
       <section v-else-if="paso === 2">
-        <div class="grid grid-cols-2 gap-2.5">
-          <button
-            v-for="c in categoriasOfrecidas"
-            :key="c.id"
-            class="flex items-center gap-2 rounded-2xl border-2 border-tinta px-3 py-3 text-left font-semibold"
-            :class="categoriaId === c.id ? 'shadow-sticker' : 'bg-papel'"
-            :style="categoriaId === c.id ? { background: c.color } : {}"
-            :aria-pressed="categoriaId === c.id"
-            @click="categoriaId = c.id"
-          >
-            <span class="text-2xl leading-none">{{ c.emoji }}</span>{{ c.nombre }}
-          </button>
-        </div>
-
-        <button class="mt-3 text-sm font-bold underline" @click="todasLasCategorias = !todasLasCategorias">
-          {{ todasLasCategorias ? 'Ver solo las de este modo' : esNoche ? 'Ver también las de día' : 'Ver también las de noche' }}
-        </button>
+        <SelectorCategoria v-model="categoriaId" />
 
         <h2 class="mt-6 font-display text-xl font-bold">¿Cuánto se gasta?</h2>
         <p class="text-sm">Opcional</p>
@@ -616,6 +598,9 @@ async function guardar() {
 
       <!-- Paso 4: fotos y nota -->
       <section v-else>
+        <h2 class="font-display text-lg font-bold">¿Qué pediste?</h2>
+        <PlatosInput v-model="platos" :categoria-id="categoriaId" class="mt-1.5 mb-5" />
+
         <div class="grid grid-cols-4 gap-2">
           <div v-for="(f, i) in fotosActuales" :key="f.path" class="relative aspect-square">
             <img :src="f.url" alt="" class="size-full rounded-xl border-2 border-tinta object-cover">

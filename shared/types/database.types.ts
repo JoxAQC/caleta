@@ -25,14 +25,14 @@ export type Database = {
           Tables: {
             "categorias": {
                   Row: {
-                    "ambito": string,"color": string,"emoji": string,"id": string,"nombre": string,"orden": number
+                    "ambito": string,"color": string,"emoji": string,"grupo": string,"id": string,"nombre": string,"orden": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "ambito"?: string,"color": string,"emoji": string,"id": string,"nombre": string,"orden"?: number
+                    "ambito"?: string,"color": string,"emoji": string,"grupo"?: string,"id": string,"nombre": string,"orden"?: number
                   }
                   Update: {
-                    "ambito"?: string,"color"?: string,"emoji"?: string,"id"?: string,"nombre"?: string,"orden"?: number
+                    "ambito"?: string,"color"?: string,"emoji"?: string,"grupo"?: string,"id"?: string,"nombre"?: string,"orden"?: number
                   }
                   Relationships: [
                     
@@ -287,14 +287,14 @@ isOneToOne: false
                   ]
                 },"resenas": {
                   Row: {
-                    "ambiente": number | null,"autor_id": string,"borrada_en": string | null,"calidad_precio": number | null,"comida": number | null,"creado_en": string,"editado_en": string | null,"general": number,"grupo_id": string,"id": string,"lugar_id": string,"nota": string | null,"plan": string | null,"privada": boolean,"servicio": number | null,"visitado_en": string
+                    "ambiente": number | null,"autor_id": string,"borrada_en": string | null,"calidad_precio": number | null,"comida": number | null,"creado_en": string,"editado_en": string | null,"general": number,"grupo_id": string,"id": string,"lugar_id": string,"nota": string | null,"plan": string | null,"platos": string[],"privada": boolean,"servicio": number | null,"visitado_en": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "ambiente"?: number | null,"autor_id": string,"borrada_en"?: string | null,"calidad_precio"?: number | null,"comida"?: number | null,"creado_en"?: string,"editado_en"?: string | null,"general": number,"grupo_id": string,"id"?: string,"lugar_id": string,"nota"?: string | null,"plan"?: string | null,"privada"?: boolean,"servicio"?: number | null,"visitado_en"?: string
+                    "ambiente"?: number | null,"autor_id": string,"borrada_en"?: string | null,"calidad_precio"?: number | null,"comida"?: number | null,"creado_en"?: string,"editado_en"?: string | null,"general": number,"grupo_id": string,"id"?: string,"lugar_id": string,"nota"?: string | null,"plan"?: string | null,"platos"?: string[],"privada"?: boolean,"servicio"?: number | null,"visitado_en"?: string
                   }
                   Update: {
-                    "ambiente"?: number | null,"autor_id"?: string,"borrada_en"?: string | null,"calidad_precio"?: number | null,"comida"?: number | null,"creado_en"?: string,"editado_en"?: string | null,"general"?: number,"grupo_id"?: string,"id"?: string,"lugar_id"?: string,"nota"?: string | null,"plan"?: string | null,"privada"?: boolean,"servicio"?: number | null,"visitado_en"?: string
+                    "ambiente"?: number | null,"autor_id"?: string,"borrada_en"?: string | null,"calidad_precio"?: number | null,"comida"?: number | null,"creado_en"?: string,"editado_en"?: string | null,"general"?: number,"grupo_id"?: string,"id"?: string,"lugar_id"?: string,"nota"?: string | null,"plan"?: string | null,"platos"?: string[],"privada"?: boolean,"servicio"?: number | null,"visitado_en"?: string
                   }
                   Relationships: [
                     {

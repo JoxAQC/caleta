@@ -357,6 +357,10 @@ async function recomendar(amigoId: string) {
           </template>
         </dl>
 
+        <p v-if="r.platos?.length" class="mt-3 text-sm">
+          <span class="font-bold">🍽️ Pidió:</span> {{ r.platos.join(' · ') }}
+        </p>
+
         <div v-if="r.resena_tags.length" class="mt-3 flex flex-wrap gap-1.5">
           <span
             v-for="t in r.resena_tags"

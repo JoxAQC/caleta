@@ -121,7 +121,7 @@ const ORDENES: { id: Orden, nombre: string }[] = [
           <input
             v-model="filtros.texto"
             type="search"
-            placeholder="Buscar"
+            placeholder="Lugar o plato"
             aria-label="Buscar entre los lugares de la mancha"
             class="min-w-0 flex-1 bg-transparent font-semibold outline-none placeholder:font-normal placeholder:text-tinta/50"
           >

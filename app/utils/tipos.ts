@@ -13,7 +13,10 @@ export interface Categoria {
   color: string
   orden: number
   ambito: 'dia' | 'noche' | 'ambos'
+  grupo: GrupoCategoria
 }
+
+export type GrupoCategoria = 'peruana' | 'rapido' | 'dulce' | 'salir' | 'otros'
 
 export interface Tag {
   id: string
@@ -56,6 +59,7 @@ export interface Resena {
   calidad_precio: number | null
   plan: PlanId | null
   nota: string | null
+  platos: string[]
   privada: boolean
   visitado_en: string
   creado_en: string

@@ -6,7 +6,7 @@ import { PRECIOS } from '~/utils/catalogo'
 // precio, dirección y ubicación. Las reseñas no se tocan.
 const route = useRoute()
 const supabase = useSupabaseClient()
-const { categorias, enModo, cargar: cargarCatalogo } = useCatalogo()
+const { cargar: cargarCatalogo } = useCatalogo()
 
 const id = route.params.id as string
 const estado = ref<'cargando' | 'listo' | 'error'>('cargando')
@@ -15,7 +15,6 @@ const direccion = ref('')
 const categoriaId = ref<string | null>(null)
 const precio = ref<number | null>(null)
 const posicion = ref<Coordenada | null>(null)
-const todas = ref(false)
 const guardando = ref(false)
 const error = ref('')
 
@@ -37,9 +36,6 @@ onMounted(async () => {
   }
 })
 
-const ofrecidas = computed(() =>
-  categorias.value.filter(c => todas.value || enModo(c.id) || c.id === categoriaId.value),
-)
 const valido = computed(() => nombre.value.trim().length > 1 && !!categoriaId.value && !!posicion.value)
 
 async function guardar() {
@@ -98,22 +94,7 @@ async function guardar() {
 
         <div>
           <span class="text-sm font-bold">Categoría</span>
-          <div class="mt-1 grid grid-cols-2 gap-2.5">
-            <button
-              v-for="c in ofrecidas"
-              :key="c.id"
-              class="flex items-center gap-2 rounded-2xl border-2 border-tinta px-3 py-2.5 text-left text-sm font-semibold"
-              :class="categoriaId === c.id ? 'shadow-sticker' : 'bg-papel'"
-              :style="categoriaId === c.id ? { background: c.color } : {}"
-              :aria-pressed="categoriaId === c.id"
-              @click="categoriaId = c.id"
-            >
-              <span class="text-xl leading-none">{{ c.emoji }}</span>{{ c.nombre }}
-            </button>
-          </div>
-          <button class="mt-2 text-sm font-bold underline" @click="todas = !todas">
-            {{ todas ? 'Ver solo las de este modo' : 'Ver todas las categorías' }}
-          </button>
+          <SelectorCategoria v-model="categoriaId" class="mt-2" />
         </div>
 
         <div>
