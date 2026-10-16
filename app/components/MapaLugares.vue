@@ -19,6 +19,12 @@ let mapa: MapaGL | undefined
 let gl: typeof import('maplibre-gl') | undefined
 let marcadores: Marker[] = []
 let enfoquePendiente = !!props.enfocar
+// La cámara se mueve sola una sola vez: al abrir el mapa (a tu ubicación o al lugar recién
+// reseñado). Después solo se mueve si la persona lo pide con el botón de ubicación.
+let centradoInicial = !!props.enfocar
+let tocoElMapa = false
+let puntoUsuario: Marker | undefined
+let vigilancia: number | undefined
 
 // Los lugares pueden llegar después que el mapa: se intenta en ambos momentos.
 function enfocarLugar() {
@@ -77,6 +83,7 @@ onMounted(async () => {
     props.enfocar ? Promise.resolve(null) : ubicacionInicial(),
   ])
   gl = modulo
+  if (aqui) centradoInicial = true
   mapa = new gl.Map({
     container: contenedor.value!,
     style: estiloMapa(esNoche.value),
@@ -84,21 +91,49 @@ onMounted(async () => {
     zoom: aqui ? ZOOM_CERCA : 12,
     attributionControl: { compact: true },
   })
-  const ubicacion = new gl.GeolocateControl({
+  // Botón para volver a tu ubicación cuando tú quieras. No sigue tu posición ni dibuja
+  // su propio punto: el punto lo pone mostrarUbicacion() sin tocar la cámara.
+  mapa.addControl(new gl.GeolocateControl({
     positionOptions: { enableHighAccuracy: true },
-    trackUserLocation: true,
-    // Sin animación: si la posición llega tarde, el mapa salta en vez de deslizarse.
-    fitBoundsOptions: { maxZoom: ZOOM_CERCA, duration: 0 },
-  })
-  mapa.addControl(ubicacion, 'bottom-right')
+    trackUserLocation: false,
+    showUserLocation: false,
+    fitBoundsOptions: { maxZoom: ZOOM_CERCA },
+  }), 'bottom-right')
   mapa.on('click', () => emit('seleccionar', null))
-  mapa.on('load', () => {
-    // El punto azul de la ubicación; la cámara ya abrió centrada si había posición.
-    if (props.enfocar) enfocarLugar()
-    else ubicacion.trigger()
+  // Si la persona ya movió el mapa, una ubicación tardía no se lo cambia.
+  mapa.on('dragstart', () => (tocoElMapa = true))
+  mapa.on('zoomstart', (e) => {
+    if ((e as { originalEvent?: Event }).originalEvent) tocoElMapa = true
   })
+  mapa.on('load', enfocarLugar)
+  mostrarUbicacion()
   pintar()
 })
+
+// Punto azul con tu posición, actualizado en vivo. Nunca mueve la cámara, salvo la
+// primera vez si al abrir no había ubicación y todavía no tocaste el mapa.
+function mostrarUbicacion() {
+  if (!navigator.geolocation || !gl) return
+  vigilancia = navigator.geolocation.watchPosition(
+    (p) => {
+      if (!mapa || !gl) return
+      const lngLat: [number, number] = [p.coords.longitude, p.coords.latitude]
+      if (!puntoUsuario) {
+        const el = document.createElement('div')
+        el.className = 'punto-usuario'
+        el.setAttribute('aria-label', 'Tu ubicación')
+        puntoUsuario = new gl.Marker({ element: el }).setLngLat(lngLat).addTo(mapa)
+      }
+      else {
+        puntoUsuario.setLngLat(lngLat)
+      }
+      if (!centradoInicial && !tocoElMapa) mapa.jumpTo({ center: lngLat, zoom: ZOOM_CERCA })
+      centradoInicial = true
+    },
+    () => {},
+    { enableHighAccuracy: true, maximumAge: 30000 },
+  )
+}
 
 watch(() => [props.lugares, props.seleccionado], () => {
   pintar()
@@ -112,7 +147,10 @@ watch(() => props.seleccionado, (id) => {
 
 watch(esNoche, noche => mapa?.setStyle(estiloMapa(noche)))
 
-onBeforeUnmount(() => mapa?.remove())
+onBeforeUnmount(() => {
+  if (vigilancia !== undefined) navigator.geolocation.clearWatch(vigilancia)
+  mapa?.remove()
+})
 </script>
 
 <template>
@@ -144,6 +182,16 @@ onBeforeUnmount(() => mapa?.remove())
   top: -10px;
   right: -8px;
   font-size: 14px;
+}
+
+/* Tu ubicación: punto azul con halo, al estilo de los mapas de siempre. */
+.punto-usuario {
+  width: 18px;
+  height: 18px;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  background: #2f80ed;
+  box-shadow: 0 0 0 6px rgb(47 128 237 / 0.25);
 }
 
 .pin--activo {

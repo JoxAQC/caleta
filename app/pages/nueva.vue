@@ -549,7 +549,7 @@ async function guardar() {
 
       <!-- Paso 3: calificación -->
       <section v-else-if="paso === 3">
-        <p class="text-sm font-bold">¿Qué plan fue?</p>
+        <p class="text-sm font-bold">¿Con quién fuiste?</p>
         <div class="mt-1.5 flex flex-wrap gap-2">
           <button
             v-for="p in PLANES"

@@ -1,12 +1,13 @@
 import type { GrupoCategoria, PlanId } from './tipos'
 
-// El plan de la visita define el ícono con el que se califica.
+// Con quién fuiste: define el ícono con el que se califica. Son gestos y personas,
+// nunca comida ni lugares, para que no se confundan con las categorías (🍻 parecía "bar").
 export const PLANES: { id: PlanId, nombre: string, emoji: string }[] = [
-  { id: 'mancha', nombre: 'Con la mancha', emoji: '🍻' },
-  { id: 'cita', nombre: 'Para cita', emoji: '🌹' },
-  { id: 'solo', nombre: 'Solo', emoji: '🎧' },
-  { id: 'familia', nombre: 'En familia', emoji: '🏡' },
-  { id: 'juerga', nombre: 'De juerga', emoji: '🪩' },
+  { id: 'mancha', nombre: 'Con la mancha', emoji: '🙌' },
+  { id: 'cita', nombre: 'En cita', emoji: '💘' },
+  { id: 'solo', nombre: 'Solo', emoji: '🧍' },
+  { id: 'familia', nombre: 'En familia', emoji: '👪' },
+  { id: 'juerga', nombre: 'De juerga', emoji: '🥳' },
 ]
 
 export const EMOJI_SIN_PLAN = '🍋'

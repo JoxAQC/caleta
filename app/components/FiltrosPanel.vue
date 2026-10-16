@@ -29,7 +29,7 @@ const chip = 'rounded-full border-2 border-tinta px-3 py-1 text-sm font-semibold
 
       <div class="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 pb-4">
         <div>
-          <h3 class="text-sm font-bold">Plan</h3>
+          <h3 class="text-sm font-bold">Con quién</h3>
           <div class="mt-1.5 flex flex-wrap gap-2">
             <button
               v-for="p in PLANES"
