@@ -23,6 +23,7 @@ export interface Tag {
   nombre: string
   orden: number
   ambito: 'ambos' | 'noche'
+  tono: 'positivo' | 'neutro' | 'negativo' | 'descriptivo'
 }
 
 export type PlanId = 'mancha' | 'cita' | 'solo' | 'familia' | 'juerga'
@@ -43,6 +44,8 @@ export interface Lugar {
 }
 
 export interface LugarResumen extends Lugar {
+  // Precio que más se repite entre las reseñas; si no hay, vale el precio del lugar.
+  precio_resenas: number | null
   promedio: number | null
   total_resenas: number
   ultima_resena: string | null
@@ -58,6 +61,8 @@ export interface Resena {
   servicio: number | null
   calidad_precio: number | null
   plan: PlanId | null
+  planes: PlanId[]
+  precio: number | null
   nota: string | null
   platos: string[]
   privada: boolean

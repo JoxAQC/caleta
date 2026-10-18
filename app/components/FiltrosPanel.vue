@@ -9,7 +9,9 @@ const { tags } = useCatalogo()
 const { mancha } = useLugares()
 const { perfil } = usePerfil()
 const { esNoche } = useModo()
-const tagsDelModo = computed(() => tags.value.filter(t => t.ambito === 'ambos' || esNoche.value))
+const tagsDelModo = computed(() =>
+  tags.value.filter(t => t.tono !== 'negativo' && (t.ambito === 'ambos' || esNoche.value)),
+)
 
 const chip = 'rounded-full border-2 border-tinta px-3 py-1 text-sm font-semibold'
 </script>

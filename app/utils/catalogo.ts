@@ -78,6 +78,17 @@ export const PRECIOS = [
   { valor: 4, etiqueta: 'S/S/S/S/', detalle: 'Ocasión' },
 ]
 
+// Precio a mostrar de un lugar: el de sus reseñas y, si no tiene, el registrado en el lugar.
+export function precioDe(l: { precio: number | null, precio_resenas?: number | null }) {
+  return l.precio_resenas ?? l.precio
+}
+
+// Qué tags evaluativos se sugieren según la nota: 1-2 negativos, 3 neutros, 4-5 positivos.
+export function tonoDeNota(nota: number): 'negativo' | 'neutro' | 'positivo' | null {
+  if (!nota) return null
+  return nota <= 2 ? 'negativo' : nota === 3 ? 'neutro' : 'positivo'
+}
+
 export function etiquetaPrecio(precio?: number | null) {
   return PRECIOS.find(p => p.valor === precio)?.etiqueta ?? ''
 }

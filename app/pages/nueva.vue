@@ -2,7 +2,7 @@
 import type { Coordenada, LugarResumen, PlanId } from '~/utils/tipos'
 import type { AspectoId } from '~/utils/catalogo'
 import type { ResultadoBusqueda } from '~/utils/buscador'
-import { ASPECTOS, LIMA, NOTAS, PLANES, PRECIOS } from '~/utils/catalogo'
+import { ASPECTOS, LIMA, NOTAS, PLANES, PRECIOS, tonoDeNota } from '~/utils/catalogo'
 import { buscarLugares } from '~/utils/buscador'
 import { comprimirImagen } from '~/utils/imagen'
 
@@ -27,12 +27,15 @@ const busqueda = ref('')
 const resultados = ref<ResultadoBusqueda[]>([])
 const buscando = ref(false)
 
-// Paso 2: categoría y precio
+// Paso 2: categoría
 const categoriaId = ref<string | null>(null)
-const precio = ref<number | null>(null)
 
 // Paso 3: calificación
-const plan = ref<PlanId | null>(null)
+// Con quién va bien: varias opciones. La primera elegida define el ícono de la calificación.
+const planes = ref<PlanId[]>([])
+const plan = computed(() => planes.value[0] ?? null)
+// Cuánto se gastó por persona en esta visita.
+const precio = ref<number | null>(null)
 const general = ref(0)
 const generalManual = ref(false)
 const detallado = ref(false)
@@ -94,7 +97,8 @@ async function cargarParaEditar(resenaId: string) {
   }
   editando.value = r.id
   elegirExistente(lugar)
-  plan.value = r.plan as PlanId | null
+  planes.value = (r.planes?.length ? r.planes : r.plan ? [r.plan] : []) as PlanId[]
+  precio.value = r.precio
   general.value = r.general
   generalManual.value = true
   aspectos.comida = r.comida ?? 0
@@ -166,7 +170,6 @@ function elegirExistente(l: LugarResumen) {
   direccion.value = l.direccion ?? ''
   posicion.value = { lat: l.lat, lng: l.lng }
   categoriaId.value = l.categoria_id
-  precio.value = l.precio
   cerrarBusqueda()
 }
 
@@ -192,12 +195,24 @@ function soltarExistente() {
 }
 
 // --- Paso 2 ---
-// Los tags de noche aparecen si el lugar es de noche, o en modo noche si sirve para ambos.
+// Tags que se sugieren: los descriptivos siempre; los evaluativos según la nota
+// (1-2 negativos, 3 neutros, 4-5 positivos); los de noche si el lugar es de noche.
+// Los ya elegidos siguen visibles aunque cambie la nota, para no perderlos sin aviso.
 const tagsOfrecidos = computed(() => {
   const ambito = categoria(categoriaId.value)?.ambito
   const deNoche = ambito === 'noche' || (ambito === 'ambos' && esNoche.value)
-  return tags.value.filter(t => t.ambito === 'ambos' || deNoche || tagsElegidos.value.includes(t.id))
+  const tono = tonoDeNota(general.value)
+  return tags.value.filter(t =>
+    tagsElegidos.value.includes(t.id)
+    || ((t.tono === 'descriptivo' || t.tono === tono) && (t.ambito === 'ambos' || deNoche)),
+  )
 })
+
+function alternarPlan(id: PlanId) {
+  const i = planes.value.indexOf(id)
+  if (i >= 0) planes.value.splice(i, 1)
+  else planes.value.push(id)
+}
 
 // --- Paso 3 ---
 watch(aspectos, () => {
@@ -358,6 +373,8 @@ async function actualizar(resenaId: string) {
       servicio: conAspectos && aspectos.servicio ? aspectos.servicio : null,
       calidad_precio: conAspectos && aspectos.calidad_precio ? aspectos.calidad_precio : null,
       plan: plan.value,
+      planes: planes.value,
+      precio: precio.value,
       nota: nota.value.trim() || null,
       platos: platos.value,
       privada: privada.value,
@@ -417,6 +434,8 @@ async function guardar() {
         servicio: conAspectos && aspectos.servicio ? aspectos.servicio : null,
         calidad_precio: conAspectos && aspectos.calidad_precio ? aspectos.calidad_precio : null,
         plan: plan.value,
+        planes: planes.value,
+        precio: precio.value,
         nota: nota.value.trim() || null,
         platos: platos.value,
         privada: privada.value,
@@ -526,38 +545,22 @@ async function guardar() {
         </p>
       </section>
 
-      <!-- Paso 2: categoría y precio -->
+      <!-- Paso 2: categoría -->
       <section v-else-if="paso === 2">
         <SelectorCategoria v-model="categoriaId" />
-
-        <h2 class="mt-6 font-display text-xl font-bold">¿Cuánto se gasta?</h2>
-        <p class="text-sm">Opcional</p>
-        <div class="mt-2 grid grid-cols-4 gap-2">
-          <button
-            v-for="p in PRECIOS"
-            :key="p.valor"
-            class="rounded-2xl border-2 border-tinta px-1 py-2 text-center"
-            :class="precio === p.valor ? 'bg-tinta text-papel' : 'bg-papel'"
-            :aria-pressed="precio === p.valor"
-            @click="precio = precio === p.valor ? null : p.valor"
-          >
-            <span class="block text-sm font-bold">{{ p.etiqueta }}</span>
-            <span class="block text-xs">{{ p.detalle }}</span>
-          </button>
-        </div>
       </section>
 
       <!-- Paso 3: calificación -->
       <section v-else-if="paso === 3">
-        <p class="text-sm font-bold">¿Con quién fuiste?</p>
+        <p class="text-sm font-bold">¿Con quién va bien? <span class="font-normal">Elige todos los que apliquen</span></p>
         <div class="mt-1.5 flex flex-wrap gap-2">
           <button
             v-for="p in PLANES"
             :key="p.id"
             class="rounded-full border-2 border-tinta px-3 py-1 text-sm font-semibold"
-            :class="plan === p.id ? 'bg-tinta text-papel' : 'bg-papel'"
-            :aria-pressed="plan === p.id"
-            @click="plan = plan === p.id ? null : p.id"
+            :class="planes.includes(p.id) ? 'bg-tinta text-papel' : 'bg-papel'"
+            :aria-pressed="planes.includes(p.id)"
+            @click="alternarPlan(p.id)"
           >
             {{ p.emoji }} {{ p.nombre }}
           </button>
@@ -578,10 +581,26 @@ async function guardar() {
           <p class="mt-3 h-7 text-center font-display text-xl font-bold">{{ general ? NOTAS[general - 1] : 'Toca para calificar' }}</p>
         </div>
 
+        <p class="mt-4 text-sm font-bold">¿Cuánto gastaste por persona? <span class="font-normal">Opcional</span></p>
+        <div class="mt-1.5 grid grid-cols-4 gap-2">
+          <button
+            v-for="p in PRECIOS"
+            :key="p.valor"
+            class="rounded-2xl border-2 border-tinta px-1 py-1.5 text-center"
+            :class="precio === p.valor ? 'bg-tinta text-papel' : 'bg-papel'"
+            :aria-pressed="precio === p.valor"
+            @click="precio = precio === p.valor ? null : p.valor"
+          >
+            <span class="block text-sm font-bold">{{ p.etiqueta }}</span>
+            <span class="block text-xs">{{ p.detalle }}</span>
+          </button>
+        </div>
+
         <button class="mt-3 text-sm font-bold underline" @click="detallado = !detallado">
           {{ detallado ? 'Volver a la calificación rápida' : 'Profundizar por aspecto' }}
         </button>
 
+        <p v-if="!general" class="mt-4 text-sm">Califica para ver sugerencias de cómo estuvo.</p>
         <div class="mt-4 flex flex-wrap gap-2">
           <button
             v-for="t in tagsOfrecidos"

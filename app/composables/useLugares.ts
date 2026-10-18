@@ -20,7 +20,7 @@ export function useLugares() {
   async function cargar() {
     const [l, r, p, q] = await Promise.all([
       supabase.from('lugares_resumen').select('*'),
-      supabase.from('resenas').select('lugar_id, autor_id, plan, platos, resena_tags(tag_id)').is('borrada_en', null),
+      supabase.from('resenas').select('lugar_id, autor_id, plan, planes, platos, resena_tags(tag_id)').is('borrada_en', null),
       supabase.from('perfiles').select('id, nombre').order('nombre'),
       supabase.from('pendientes').select('lugar_id').eq('usuario_id', perfil.value?.id ?? ''),
     ])
@@ -35,7 +35,7 @@ export function useLugares() {
       let x = porLugar.get(res.lugar_id)
       if (!x) porLugar.set(res.lugar_id, x = { tags: new Set(), planes: new Set(), autores: new Set(), platos: new Set() })
       x.autores.add(res.autor_id)
-      if (res.plan) x.planes.add(res.plan as PlanId)
+      ;(res.planes.length ? res.planes : res.plan ? [res.plan] : []).forEach(p => x!.planes.add(p as PlanId))
       res.resena_tags.forEach(t => x!.tags.add(t.tag_id))
       res.platos.forEach(p => x!.platos.add(p))
     }

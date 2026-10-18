@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Coordenada } from '~/utils/tipos'
-import { distanciaMetros, etiquetaPrecio } from '~/utils/catalogo'
+import { distanciaMetros, etiquetaPrecio, precioDe } from '~/utils/catalogo'
 
 type Orden = 'nota' | 'recientes' | 'cerca'
 
@@ -214,7 +214,7 @@ const ORDENES: { id: Orden, nombre: string }[] = [
               <h2 class="truncate font-display text-xl leading-tight font-bold">{{ lugar.nombre }}</h2>
               <p class="truncate text-sm">
                 {{ categoria(lugar.categoria_id)?.nombre }}
-                <template v-if="lugar.precio"> · {{ etiquetaPrecio(lugar.precio) }}</template>
+                <template v-if="precioDe(lugar)"> · {{ etiquetaPrecio(precioDe(lugar)) }}</template>
               </p>
             </div>
             <span v-if="lugar.promedio" class="rounded-full border-2 border-tinta bg-limon px-2.5 py-0.5 font-display font-bold">
@@ -285,7 +285,7 @@ const ORDENES: { id: Orden, nombre: string }[] = [
             <h2 class="truncate font-display text-lg leading-tight font-bold">{{ l.nombre }}</h2>
             <p class="truncate text-sm">
               {{ categoria(l.categoria_id)?.nombre }}
-              <template v-if="l.precio"> · {{ etiquetaPrecio(l.precio) }}</template>
+              <template v-if="precioDe(l)"> · {{ etiquetaPrecio(precioDe(l)) }}</template>
               <template v-if="distancia(l) != null"> · {{ textoDistancia(distancia(l)) }}</template>
             </p>
           </div>

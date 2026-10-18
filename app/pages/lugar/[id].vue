@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { LugarResumen, Pendiente, Perfil, Resena } from '~/utils/tipos'
-import { ASPECTOS, emojiDePlan, etiquetaPrecio, fechaHora, NOTAS, PLANES } from '~/utils/catalogo'
+import { ASPECTOS, emojiDePlan, etiquetaPrecio, fechaHora, NOTAS, PLANES, precioDe } from '~/utils/catalogo'
 
 const route = useRoute()
 const supabase = useSupabaseClient()
@@ -68,7 +68,12 @@ function fecha(dia: string) {
   const [a, m, d] = dia.split('-').map(Number)
   return new Date(a!, m! - 1, d!).toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' })
 }
-const nombrePlan = (id: string | null) => PLANES.find(p => p.id === id)?.nombre
+// Con quién va bien, según la reseña (las antiguas solo tienen `plan`).
+const nombresPlanes = (r: Resena) =>
+  (r.planes?.length ? r.planes : r.plan ? [r.plan] : [])
+    .map(id => PLANES.find(p => p.id === id)?.nombre)
+    .filter(Boolean)
+    .join(', ')
 
 // --- Borrar mi reseña ---
 const porBorrar = ref<string | null>(null)
@@ -211,7 +216,7 @@ async function recomendar(amigoId: string) {
         <div class="flex items-start gap-2">
           <p class="flex-1 text-sm font-bold">
             {{ cat?.emoji }} {{ cat?.nombre }}
-            <template v-if="lugar.precio"> · {{ etiquetaPrecio(lugar.precio) }}</template>
+            <template v-if="precioDe(lugar)"> · {{ etiquetaPrecio(precioDe(lugar)) }}</template>
           </p>
           <NuxtLink :to="`/corregir/${lugar.id}`" class="size-9 shrink-0 grid place-items-center rounded-full border-2 border-tinta bg-papel" aria-label="Corregir datos del lugar">
             <Icono nombre="lapiz" />
@@ -309,7 +314,8 @@ async function recomendar(amigoId: string) {
             <p class="font-bold">{{ r.autor?.nombre }}</p>
             <p v-if="r.borrada_en" class="text-xs">Borró su reseña</p>
             <p v-else class="text-xs">
-              {{ fecha(r.visitado_en) }}<template v-if="r.plan"> · {{ nombrePlan(r.plan) }}</template>
+              {{ fecha(r.visitado_en) }}<template v-if="nombresPlanes(r)"> · {{ nombresPlanes(r) }}</template>
+              <template v-if="r.precio"> · {{ etiquetaPrecio(r.precio) }} por persona</template>
               <button
                 v-if="r.editado_en"
                 class="italic"

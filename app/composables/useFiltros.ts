@@ -33,7 +33,8 @@ export function useFiltros() {
     if (f.categorias.length && !f.categorias.includes(l.categoria_id)) return false
     if (!f.tags.every(t => l.tags.includes(t))) return false
     if (f.plan && !l.planes.includes(f.plan)) return false
-    if (f.precioMax && (l.precio == null || l.precio > f.precioMax)) return false
+    const precio = l.precio_resenas ?? l.precio
+    if (f.precioMax && (precio == null || precio > f.precioMax)) return false
     if (f.minimo && (l.promedio ?? 0) < f.minimo) return false
     if (f.autor && !l.autores.includes(f.autor)) return false
     if (f.soloPendientes && !l.pendiente) return false

@@ -287,14 +287,14 @@ isOneToOne: false
                   ]
                 },"resenas": {
                   Row: {
-                    "ambiente": number | null,"autor_id": string,"borrada_en": string | null,"calidad_precio": number | null,"comida": number | null,"creado_en": string,"editado_en": string | null,"general": number,"grupo_id": string,"id": string,"lugar_id": string,"nota": string | null,"plan": string | null,"platos": (string)[],"privada": boolean,"servicio": number | null,"visitado_en": string
+                    "ambiente": number | null,"autor_id": string,"borrada_en": string | null,"calidad_precio": number | null,"comida": number | null,"creado_en": string,"editado_en": string | null,"general": number,"grupo_id": string,"id": string,"lugar_id": string,"nota": string | null,"plan": string | null,"planes": (string)[],"platos": (string)[],"precio": number | null,"privada": boolean,"servicio": number | null,"visitado_en": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "ambiente"?: number | null,"autor_id": string,"borrada_en"?: string | null,"calidad_precio"?: number | null,"comida"?: number | null,"creado_en"?: string,"editado_en"?: string | null,"general": number,"grupo_id": string,"id"?: string,"lugar_id": string,"nota"?: string | null,"plan"?: string | null,"platos"?: (string)[],"privada"?: boolean,"servicio"?: number | null,"visitado_en"?: string
+                    "ambiente"?: number | null,"autor_id": string,"borrada_en"?: string | null,"calidad_precio"?: number | null,"comida"?: number | null,"creado_en"?: string,"editado_en"?: string | null,"general": number,"grupo_id": string,"id"?: string,"lugar_id": string,"nota"?: string | null,"plan"?: string | null,"planes"?: (string)[],"platos"?: (string)[],"precio"?: number | null,"privada"?: boolean,"servicio"?: number | null,"visitado_en"?: string
                   }
                   Update: {
-                    "ambiente"?: number | null,"autor_id"?: string,"borrada_en"?: string | null,"calidad_precio"?: number | null,"comida"?: number | null,"creado_en"?: string,"editado_en"?: string | null,"general"?: number,"grupo_id"?: string,"id"?: string,"lugar_id"?: string,"nota"?: string | null,"plan"?: string | null,"platos"?: (string)[],"privada"?: boolean,"servicio"?: number | null,"visitado_en"?: string
+                    "ambiente"?: number | null,"autor_id"?: string,"borrada_en"?: string | null,"calidad_precio"?: number | null,"comida"?: number | null,"creado_en"?: string,"editado_en"?: string | null,"general"?: number,"grupo_id"?: string,"id"?: string,"lugar_id"?: string,"nota"?: string | null,"plan"?: string | null,"planes"?: (string)[],"platos"?: (string)[],"precio"?: number | null,"privada"?: boolean,"servicio"?: number | null,"visitado_en"?: string
                   }
                   Relationships: [
                     {
@@ -325,14 +325,14 @@ isOneToOne: false
                   ]
                 },"tags": {
                   Row: {
-                    "ambito": string,"id": string,"nombre": string,"orden": number
+                    "ambito": string,"id": string,"nombre": string,"orden": number,"tono": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "ambito"?: string,"id": string,"nombre": string,"orden"?: number
+                    "ambito"?: string,"id": string,"nombre": string,"orden"?: number,"tono"?: string
                   }
                   Update: {
-                    "ambito"?: string,"id"?: string,"nombre"?: string,"orden"?: number
+                    "ambito"?: string,"id"?: string,"nombre"?: string,"orden"?: number,"tono"?: string
                   }
                   Relationships: [
                     
@@ -342,7 +342,7 @@ isOneToOne: false
           Views: {
             "lugares_resumen": {
                   Row: {
-                    "categoria_id": string | null,"creado_en": string | null,"creado_por": string | null,"direccion": string | null,"grupo_id": string | null,"id": string | null,"lat": number | null,"lng": number | null,"nombre": string | null,"precio": number | null,"promedio": number | null,"proveedor": string | null,"ref_externa": string | null,"total_resenas": number | null,"ultima_resena": string | null
+                    "categoria_id": string | null,"creado_en": string | null,"creado_por": string | null,"direccion": string | null,"grupo_id": string | null,"id": string | null,"lat": number | null,"lng": number | null,"nombre": string | null,"precio": number | null,"precio_resenas": number | null,"promedio": number | null,"proveedor": string | null,"ref_externa": string | null,"total_resenas": number | null,"ultima_resena": string | null
                   }
                   ComputedFields: never
                   Relationships: [

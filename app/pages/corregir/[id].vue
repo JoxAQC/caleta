@@ -98,7 +98,8 @@ async function guardar() {
         </div>
 
         <div>
-          <span class="text-sm font-bold">Precio</span>
+          <span class="text-sm font-bold">Precio de referencia</span>
+          <p class="text-xs">Se usa mientras el lugar no tenga reseñas con precio.</p>
           <div class="mt-1 grid grid-cols-4 gap-2">
             <button
               v-for="p in PRECIOS"
